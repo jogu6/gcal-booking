@@ -281,6 +281,14 @@ function validateBooking_(input) {
     throw new Error('予約可能時間外です。');
   }
 
+  const now = new Date();
+  const nowDate = Utilities.formatDate(now, CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+  const nowTime = Utilities.formatDate(now, CONFIG.TIME_ZONE, 'HH:mm');
+
+  if (input.date < nowDate || (input.date === nowDate && input.time <= nowTime)) {
+    throw new Error('予約時刻を過ぎています。別の時刻を選択してください。');
+  }
+
   const normalized = normalizeName_(input.name);
   if (!/^[a-z][a-z'-]* [a-z][a-z'-]*$/i.test(normalized)) {
     throw new Error('キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。');
