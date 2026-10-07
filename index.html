@@ -582,7 +582,7 @@ input:not([type="hidden"]):focus{
     <p>登録作業を1対1でサポートするための予約ページです。所要時間は<strong>約30分</strong>です。</p>
 
     <div class="notice">
-      <strong>予約期間：</strong>2026年10月11日～10月18日<br>
+      <strong>予約期間：</strong>2026年10月11日 18:00～10月18日<br>
       <span class="small">期間外をご希望の方は、リーダーもしくは私 Og Og までご連絡ください。</span><br>
       <strong>対応時間：</strong>08:00～24:00（30分単位）
     </div>
@@ -744,6 +744,10 @@ input:not([type="hidden"]):focus{
       date:`${values.year}-${values.month}-${values.day}`,
       time:`${values.hour}:${values.minute}`
     };
+  }
+
+  function isBeforeReceptionStart(date,time){
+    return date==="2026-10-11" && time<"18:00";
   }
 
   function isTooSoonSlot(date,time){
@@ -996,6 +1000,10 @@ input:not([type="hidden"]):focus{
           btn.classList.add("booked");
           btn.disabled=true;
           btn.textContent=`${time} 予約済み`;
+        }else if(isBeforeReceptionStart(d,time)){
+          btn.classList.add("past");
+          btn.disabled=true;
+          btn.textContent=`${time} 受付開始前`;
         }else if(isTooSoonSlot(d,time)){
           btn.classList.add("past");
           btn.disabled=true;
