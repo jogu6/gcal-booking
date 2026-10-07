@@ -359,6 +359,25 @@ input:not([type="hidden"]):focus{
   border-width:0 3px 3px 0;
   transform:rotate(45deg);
 }
+.name-check-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 72px;
+  gap:10px;
+  align-items:stretch;
+}
+.name-check-row input{min-width:0}
+.name-check-button{
+  min-height:46px;
+  border:1px solid rgba(190,207,224,.38);
+  border-radius:7px;
+  background:linear-gradient(180deg,#365777,#28425e);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 7px rgba(0,0,0,.25);
+}
+.name-check-button:hover{filter:brightness(1.08)}
+.name-check-button:disabled{opacity:.55;cursor:default}
 .dc-choice-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -581,8 +600,11 @@ input:not([type="hidden"]):focus{
 
       <div class="row">
         <label for="characterName">キャラクターフルネーム</label>
-        <input id="characterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb" required>
-        <div class="small">FF14のキャラクターフルネームを入力してください。入力後にEnterで名前を確認します。全角英数字・全角スペース、英字の大小文字は照合時に正規化します。</div>
+        <div class="name-check-row">
+          <input id="characterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb" required>
+          <button id="characterNameOk" type="button" class="name-check-button">OK</button>
+        </div>
+        <div class="small">FF14のキャラクターフルネームを入力して「OK」を押してください。Enterでも確認できます。全角英数字・全角スペース、英字の大小文字は照合時に正規化します。</div>
       </div>
 
       <div id="dcRow" class="row hidden">
@@ -807,11 +829,27 @@ input:not([type="hidden"]):focus{
   }
 
   const characterNameInput=document.getElementById("characterName");
+  const characterNameOk=document.getElementById("characterNameOk");
+
+  characterNameOk.addEventListener("click",async()=>{
+    characterNameOk.disabled=true;
+    try{
+      await verifyMemberAndApplyDc();
+    }finally{
+      characterNameOk.disabled=false;
+    }
+  });
+
   characterNameInput.addEventListener("keydown",async e=>{
     if(e.key!=="Enter") return;
     e.preventDefault();
     e.stopPropagation();
-    await verifyMemberAndApplyDc();
+    characterNameOk.disabled=true;
+    try{
+      await verifyMemberAndApplyDc();
+    }finally{
+      characterNameOk.disabled=false;
+    }
   });
 
   let processingCount=0;
