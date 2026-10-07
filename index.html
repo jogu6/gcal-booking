@@ -582,7 +582,7 @@ input:not([type="hidden"]):focus{
       <div class="row">
         <label for="characterName">キャラクターフルネーム</label>
         <input id="characterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb" required>
-        <div class="small">FF14のキャラクターフルネームを入力してください。全角英数字・全角スペース、英字の大小文字は照合時に正規化します。</div>
+        <div class="small">FF14のキャラクターフルネームを入力してください。入力後にEnterで名前を確認します。全角英数字・全角スペース、英字の大小文字は照合時に正規化します。</div>
       </div>
 
       <div id="dcRow" class="row hidden">
@@ -807,10 +807,6 @@ input:not([type="hidden"]):focus{
   }
 
   const characterNameInput=document.getElementById("characterName");
-  characterNameInput.addEventListener("blur",e=>{
-    if(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".dc-choice")) return;
-    verifyMemberAndApplyDc();
-  });
   characterNameInput.addEventListener("keydown",async e=>{
     if(e.key!=="Enter") return;
     e.preventDefault();
