@@ -286,6 +286,34 @@ input:not([type="hidden"]):focus{
   background:linear-gradient(90deg,rgba(199,170,112,.20),rgba(199,170,112,.07));
   color:#fff5dc;
 }
+.dc-choice-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.dc-choice{
+  min-height:48px;
+  border:1px solid rgba(190,207,224,.34);
+  border-radius:7px;
+  background:linear-gradient(180deg,#202c39,#17212c);
+  color:#e8eef5;
+  cursor:pointer;
+  text-align:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 1px 0 rgba(0,0,0,.45);
+}
+.dc-choice:hover{
+  border-color:rgba(156,199,239,.58);
+  background:linear-gradient(180deg,#283749,#1b2734);
+}
+.dc-choice.selected{
+  border-color:rgba(208,185,130,.68);
+  background:linear-gradient(180deg,rgba(199,170,112,.30),rgba(118,95,55,.28));
+  color:#fff2cf;
+  box-shadow:inset 0 0 0 1px rgba(255,239,196,.12),0 0 0 2px rgba(199,170,112,.10);
+}
+@media(max-width:520px){
+  .dc-choice-grid{grid-template-columns:1fr}
+}
 .message{
   padding:13px 14px;
   border-radius:7px;
@@ -396,17 +424,11 @@ input:not([type="hidden"]):focus{
       <div id="dcRow" class="row hidden">
         <label>集合希望DC</label>
         <input type="hidden" id="dc" value="">
-        <div class="custom-select" id="dcSelect">
-          <button type="button" class="custom-select-trigger" id="dcSelectTrigger" aria-haspopup="listbox" aria-expanded="false">
-            <span id="dcSelectLabel">選択してください</span>
-            <span class="custom-select-arrow" aria-hidden="true"></span>
-          </button>
-          <div class="custom-select-menu hidden" id="dcSelectMenu" role="listbox" aria-label="集合希望DC">
-            <button type="button" class="custom-select-option" data-value="Elemental" role="option">Elemental</button>
-            <button type="button" class="custom-select-option" data-value="Gaia" role="option">Gaia</button>
-            <button type="button" class="custom-select-option" data-value="Mana" role="option">Mana</button>
-            <button type="button" class="custom-select-option" data-value="Meteor" role="option">Meteor</button>
-          </div>
+        <div class="dc-choice-grid" id="dcChoiceGrid" role="radiogroup" aria-label="集合希望DC">
+          <button type="button" class="dc-choice" data-value="Elemental" role="radio" aria-checked="false">Elemental</button>
+          <button type="button" class="dc-choice" data-value="Gaia" role="radio" aria-checked="false">Gaia</button>
+          <button type="button" class="dc-choice" data-value="Mana" role="radio" aria-checked="false">Mana</button>
+          <button type="button" class="dc-choice" data-value="Meteor" role="radio" aria-checked="false">Meteor</button>
         </div>
       </div>
 
@@ -472,6 +494,20 @@ input:not([type="hidden"]):focus{
     el.textContent=text;
   }
 
+  function showGlobalNotice(text,type){
+    let el=document.getElementById("globalNotice");
+    if(!el){
+      el=document.createElement("div");
+      el.id="globalNotice";
+      el.className="message";
+      const calendarCard=document.getElementById("calendar").closest(".card");
+      calendarCard.insertBefore(el,document.getElementById("calendar"));
+    }
+    el.className=`message ${type}`;
+    el.textContent=text;
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+
   let verifiedMember = false;
 
   async function verifyMemberAndApplyDc(){
@@ -484,7 +520,7 @@ input:not([type="hidden"]):focus{
 
     verifiedMember=false;
     dcRow.classList.add("hidden");
-    dc.required=false;
+    
     setDcValue("");
 
     if(!validName(name)){
@@ -513,7 +549,7 @@ input:not([type="hidden"]):focus{
       const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
       if(needsDc){
         dcRow.classList.remove("hidden");
-        dc.required=true;
+        
         if(result.dc) setDcValue(result.dc);
       }
 
@@ -615,6 +651,7 @@ input:not([type="hidden"]):focus{
         const btn=document.createElement("button");
         btn.type="button";
         btn.className="slot";
+        btn.dataset.slotKey=key;
 
         if(bookedSlots.has(key)){
           btn.classList.add("booked");
@@ -633,6 +670,15 @@ input:not([type="hidden"]):focus{
     }
   }
 
+  function scrollToSlot(slotKey){
+    requestAnimationFrame(()=>{
+      const target=document.querySelector('.slot[data-slot-key="'+CSS.escape(slotKey)+'"]');
+      if(target){
+        target.scrollIntoView({behavior:"smooth",block:"center"});
+      }
+    });
+  }
+
   function selectSlot(date,time,button){
     document.querySelectorAll(".slot.selected").forEach(x=>x.classList.remove("selected"));
     button.classList.add("selected");
@@ -645,7 +691,7 @@ input:not([type="hidden"]):focus{
     const dc=document.getElementById("dc");
     verifiedMember=false;
     dcRow.classList.add("hidden");
-    dc.required=false;
+    
     setDcValue("");
 
     const card=document.getElementById("formCard");
@@ -654,88 +700,22 @@ input:not([type="hidden"]):focus{
   }
 
 
-  const dcSelect=document.getElementById("dcSelect");
-  const dcSelectTrigger=document.getElementById("dcSelectTrigger");
-  const dcSelectMenu=document.getElementById("dcSelectMenu");
-  const dcSelectLabel=document.getElementById("dcSelectLabel");
   const dcInput=document.getElementById("dc");
 
   function setDcValue(value){
     dcInput.value=value || "";
-    dcSelectLabel.textContent=value || "選択してください";
-    document.querySelectorAll(".custom-select-option").forEach(btn=>{
+    document.querySelectorAll(".dc-choice").forEach(btn=>{
       const selected=btn.dataset.value===value;
       btn.classList.toggle("selected",selected);
-      btn.setAttribute("aria-selected",selected ? "true" : "false");
+      btn.setAttribute("aria-checked",selected ? "true" : "false");
     });
   }
 
-  function positionDcSelectMenu(){
-    if(dcSelectMenu.classList.contains("hidden")) return;
-
-    const triggerRect=dcSelectTrigger.getBoundingClientRect();
-    const viewportHeight=window.innerHeight || document.documentElement.clientHeight;
-    const gap=7;
-    const edgeMargin=10;
-    const rowHeight=44;
-    const menuPadding=12;
-    const rowCount=dcSelectMenu.querySelectorAll(".custom-select-option").length;
-    const desiredHeight=Math.min(8,rowCount)*rowHeight+menuPadding;
-
-    const spaceBelow=Math.max(0,viewportHeight-triggerRect.bottom-gap-edgeMargin);
-    const spaceAbove=Math.max(0,triggerRect.top-gap-edgeMargin);
-
-    const openUp=spaceBelow<desiredHeight && spaceAbove>spaceBelow;
-    dcSelectMenu.classList.toggle("open-up",openUp);
-
-    const available=openUp ? spaceAbove : spaceBelow;
-    const maxHeight=Math.max(rowHeight+menuPadding,Math.min(desiredHeight,available));
-    dcSelectMenu.style.maxHeight=maxHeight+"px";
-  }
-
-  function closeDcSelect(){
-    dcSelect.classList.remove("open");
-    dcSelectMenu.classList.add("hidden");
-    dcSelectMenu.classList.remove("open-up");
-    dcSelectMenu.style.maxHeight="";
-    dcSelectTrigger.setAttribute("aria-expanded","false");
-  }
-
-  dcSelectTrigger.addEventListener("click",()=>{
-    const opening=dcSelectMenu.classList.contains("hidden");
-    dcSelect.classList.toggle("open",opening);
-    dcSelectMenu.classList.toggle("hidden",!opening);
-    dcSelectTrigger.setAttribute("aria-expanded",opening ? "true" : "false");
-    if(opening){
-      positionDcSelectMenu();
-      const selectedOption=dcSelectMenu.querySelector(".custom-select-option.selected");
-      if(selectedOption) selectedOption.scrollIntoView({block:"nearest"});
-    }
-  });
-
-  document.querySelectorAll(".custom-select-option").forEach(btn=>{
+  document.querySelectorAll(".dc-choice").forEach(btn=>{
     btn.addEventListener("click",()=>{
       setDcValue(btn.dataset.value);
-      closeDcSelect();
-      dcSelectTrigger.focus();
     });
   });
-
-  document.addEventListener("click",e=>{
-    if(!dcSelect.contains(e.target)) closeDcSelect();
-  });
-
-  document.addEventListener("keydown",e=>{
-    if(e.key==="Escape") closeDcSelect();
-  });
-
-  window.addEventListener("resize",()=>{
-    if(!dcSelectMenu.classList.contains("hidden")) positionDcSelectMenu();
-  });
-
-  window.addEventListener("scroll",()=>{
-    if(!dcSelectMenu.classList.contains("hidden")) positionDcSelectMenu();
-  },{passive:true});
 
   document.getElementById("bookingForm").addEventListener("submit",async e=>{
     e.preventDefault();
@@ -768,16 +748,28 @@ input:not([type="hidden"]):focus{
 
       if(!result.ok) throw new Error(result.message || "予約できませんでした");
 
-      bookedSlots.add(`${selected.date} ${selected.time}`);
+      const bookedKey=`${selected.date} ${selected.time}`;
+      bookedSlots.add(bookedKey);
       renderCalendar();
-      showMessage("予約しました。","success");
+      showMessage("予約しました。予約した時刻を表示します。","success");
       selected=null;
       document.getElementById("characterName").value="";
       setDcValue("");
-      setTimeout(()=>document.getElementById("formCard").classList.add("hidden"),1200);
+      document.getElementById("formCard").classList.add("hidden");
+      scrollToSlot(bookedKey);
     }catch(err){
-      showMessage(err.message || "予約できませんでした。","error");
-      await loadSlots();
+      const message=err.message || "予約できませんでした。";
+
+      if(message.includes("この時間は先に予約されました")){
+        const collidedKey=selected ? `${selected.date} ${selected.time}` : null;
+        await loadSlots();
+        if(collidedKey) scrollToSlot(collidedKey);
+        selected=null;
+        document.getElementById("formCard").classList.add("hidden");
+        showGlobalNotice("その時刻は他の方に先に予約されました。別の時刻を選択してください。","error");
+      }else{
+        showMessage(message,"error");
+      }
     }finally{
       submit.disabled=false;
       submit.textContent="この日時で予約する";
