@@ -779,7 +779,10 @@ input:not([type="hidden"]):focus{
   }
 
   const characterNameInput=document.getElementById("characterName");
-  characterNameInput.addEventListener("blur",verifyMemberAndApplyDc);
+  characterNameInput.addEventListener("blur",e=>{
+    if(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".dc-choice")) return;
+    verifyMemberAndApplyDc();
+  });
   characterNameInput.addEventListener("keydown",async e=>{
     if(e.key!=="Enter") return;
     e.preventDefault();
