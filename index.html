@@ -778,7 +778,14 @@ input:not([type="hidden"]):focus{
     }
   }
 
-  document.getElementById("characterName").addEventListener("blur",verifyMemberAndApplyDc);
+  const characterNameInput=document.getElementById("characterName");
+  characterNameInput.addEventListener("blur",verifyMemberAndApplyDc);
+  characterNameInput.addEventListener("keydown",async e=>{
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    e.stopPropagation();
+    await verifyMemberAndApplyDc();
+  });
 
   let processingCount=0;
 
@@ -1152,6 +1159,7 @@ input:not([type="hidden"]):focus{
 
   document.getElementById("bookingForm").addEventListener("submit",async e=>{
     e.preventDefault();
+    if(document.activeElement===characterNameInput) return;
     if(!selected) return showMessage("希望日時を選択してください。","error");
 
     const name=document.getElementById("characterName").value;
