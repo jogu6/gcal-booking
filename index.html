@@ -40,7 +40,7 @@ body:before{
   position:fixed;
   inset:0;
   pointer-events:none;
-  background:url("./assets/evercold.png") center 64px / min(100vw, 1920px) auto no-repeat;
+  background:url("./assets/evercold.png") center center / min(100vw, 1920px) auto no-repeat;
   opacity:.82;
   filter:saturate(.98) brightness(1.02);
 }
@@ -475,7 +475,7 @@ input:not([type="hidden"]):focus{
 @media(max-width:600px){
   body:before{
     background-size:100vw auto;
-    background-position:center 48px;
+    background-position:center center;
   }
   main{width:min(100% - 12px,1040px);margin-top:8px}
   .card{padding:16px;border-radius:8px}
