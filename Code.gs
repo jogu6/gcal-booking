@@ -36,7 +36,9 @@ function doGet(e) {
         date: e.parameter.date,
         time: e.parameter.time,
         name: e.parameter.name,
-        dc: e.parameter.dc || ''
+        dc: e.parameter.dc || '',
+        useX: e.parameter.useX === '1',
+        xAccount: e.parameter.xAccount || ''
       });
     } else if (action === 'cancel') {
       result = cancel_(e.parameter.name);
@@ -71,6 +73,8 @@ function member_(name) {
   const timeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
   const bookingDate = normalizeSheetDate_(dateText);
   const meetingDc = String(sheet.getRange(member.row, CONFIG.COL_MEETING_DC).getDisplayValue() || '').trim();
+  const note = String(sheet.getRange(member.row, CONFIG.COL_NOTE).getDisplayValue() || '');
+  const xMatch = note.match(/(?:^|\n)X:\s*(@[A-Za-z0-9_]{1,15})(?:$|\n)/);
   const hasBooking = status === '予約済' && !!bookingDate && !!timeText;
 
   return {
@@ -83,7 +87,9 @@ function member_(name) {
     canCancel: hasBooking,
     bookingDate: hasBooking ? bookingDate : '',
     bookingTime: hasBooking ? timeText : '',
-    bookingKey: hasBooking ? bookingDate + ' ' + timeText : ''
+    bookingKey: hasBooking ? bookingDate + ' ' + timeText : '',
+    useX: !!xMatch,
+    xAccount: xMatch ? xMatch[1] : ''
   };
 }
 
@@ -145,6 +151,7 @@ function book_(input) {
     sheet.getRange(member.row, CONFIG.COL_TIME).setValue(input.time);
     sheet.getRange(member.row, CONFIG.COL_STATUS).setValue('予約済');
     sheet.getRange(member.row, CONFIG.COL_MEETING_DC).setValue(input.dc || '');
+    updateXNote_(sheet, member.row, input.useX, input.xAccount);
 
     return {
       ok: true,
@@ -302,6 +309,33 @@ function validateBooking_(input) {
   }
 
   if (!needsDc) input.dc = '';
+
+  if (input.useX) {
+    const raw = String(input.xAccount || '').trim();
+    const handle = raw.startsWith('@') ? raw.slice(1) : raw;
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) {
+      throw new Error('X アカウント名が正しくありません。@og_ff14 のように入力してください。');
+    }
+    input.xAccount = '@' + handle;
+  } else {
+    input.xAccount = '';
+  }
+}
+
+function updateXNote_(sheet, row, useX, xAccount) {
+  const range = sheet.getRange(row, CONFIG.COL_NOTE);
+  const original = String(range.getDisplayValue() || '');
+  const lines = original
+    .split(/\r?\n/)
+    .filter(line => !/^X:\s*@?[A-Za-z0-9_]{1,15}\s*$/.test(line.trim()));
+
+  if (useX && xAccount) {
+    lines.push('X: ' + xAccount);
+  }
+
+  const next = lines.join('\n').trim();
+  if (next) range.setValue(next);
+  else range.clearContent();
 }
 
 function getSheet_() {
