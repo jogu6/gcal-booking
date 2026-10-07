@@ -163,26 +163,55 @@
     el.textContent=text;
   }
 
-  async function applyDefaultDc(){
-    if(!selected) return;
-    const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
-    if(!needsDc) return;
+  let verifiedMember = false;
 
-    const name=document.getElementById("characterName").value;
+  async function verifyMemberAndApplyDc(){
+    if(!selected) return false;
+
+    const nameInput=document.getElementById("characterName");
+    const name=nameInput.value;
+    const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
-    if(!validName(name)) return;
+
+    verifiedMember=false;
+    dcRow.classList.add("hidden");
+    dc.required=false;
+    dc.value="";
+
+    if(!validName(name)){
+      showMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
+      return false;
+    }
 
     try{
-      const result=await jsonp({action:"memberDc",name:name});
-      if(result.ok && result.dc){
-        dc.value=result.dc;
+      const result=await jsonp({action:"member",name:name});
+
+      if(!result.ok || !result.found){
+        showMessage("名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。","error");
+        return false;
       }
+
+      verifiedMember=true;
+
+      const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
+      if(needsDc){
+        dcRow.classList.remove("hidden");
+        dc.required=true;
+        if(result.dc) dc.value=result.dc;
+      }
+
+      const message=document.getElementById("message");
+      message.className="";
+      message.textContent="";
+      return true;
+
     }catch(_){
-      // 初期DC取得に失敗しても、本人が手動選択できるので予約操作は継続可能。
+      showMessage("名前の確認に失敗しました。もう一度お試しください。","error");
+      return false;
     }
   }
 
-  document.getElementById("characterName").addEventListener("blur",applyDefaultDc);
+  document.getElementById("characterName").addEventListener("blur",verifyMemberAndApplyDc);
 
   function jsonp(params){
     return new Promise((resolve,reject)=>{
@@ -276,15 +305,10 @@
 
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
-    const needsDc=date==="2026-10-11" || date==="2026-10-12";
-    dcRow.classList.toggle("hidden",!needsDc);
-    dc.required=needsDc;
-    if(!needsDc){
-      dc.value="";
-    }else{
-      dc.value="";
-      applyDefaultDc();
-    }
+    verifiedMember=false;
+    dcRow.classList.add("hidden");
+    dc.required=false;
+    dc.value="";
 
     const card=document.getElementById("formCard");
     card.classList.remove("hidden");
@@ -299,6 +323,9 @@
     if(!validName(name)){
       return showMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
     }
+
+    const memberOk = await verifyMemberAndApplyDc();
+    if(!memberOk) return;
 
     const dc=document.getElementById("dc").value;
     const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
