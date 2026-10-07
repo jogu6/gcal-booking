@@ -65,23 +65,7 @@ main{
     inset 0 1px 0 rgba(255,255,255,.06),
     inset 0 -1px 0 rgba(0,0,0,.45);
 }
-.card:before,.card:after{
-  content:"";
-  position:absolute;
-  width:18px;
-  height:18px;
-  pointer-events:none;
-}
-.card:before{
-  left:6px;top:6px;
-  border-left:1px solid rgba(199,170,112,.65);
-  border-top:1px solid rgba(199,170,112,.65);
-}
-.card:after{
-  right:6px;bottom:6px;
-  border-right:1px solid rgba(199,170,112,.45);
-  border-bottom:1px solid rgba(199,170,112,.45);
-}
+
 .hero{
   min-height:220px;
   background:
@@ -132,9 +116,12 @@ p,li{line-height:1.8}
   font-weight:700;
   font-size:17px;
   margin-bottom:10px;
-  padding:7px 10px;
-  border-left:3px solid var(--gold-soft);
-  background:linear-gradient(90deg,rgba(255,255,255,.045),transparent 70%);
+  padding:9px 12px;
+  border-top:1px solid rgba(199,170,112,.22);
+  border-bottom:1px solid rgba(199,170,112,.22);
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.045) 18%,rgba(255,255,255,.045) 82%,transparent 100%);
+  text-align:center;
+  letter-spacing:.02em;
 }
 .day-title.saturday{color:#86bfff}
 .day-title.sunday,.day-title.holiday{color:#ff9d9d}
