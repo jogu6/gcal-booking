@@ -8,6 +8,7 @@ const CONFIG = {
   SLOT_MINUTES: 30,
   HEADERS: [
     'キャラクター名',
+    '所属DC',
     '予約状態',
     '予約日時',
     '集合DC',
@@ -36,13 +37,13 @@ function setupSheet() {
   if (lastRow >= 2) {
     const values = sheet.getRange(2, 1, lastRow - 1, CONFIG.HEADERS.length).getValues();
     values.forEach((row, i) => {
-      if (row[0] && row[0] !== '⚠ 未照合' && !row[1]) {
-        sheet.getRange(i + 2, 2).setValue('未予約');
+      if (row[0] && row[0] !== '⚠ 未照合' && !row[2]) {
+        sheet.getRange(i + 2, 3).setValue('未予約');
       }
     });
   }
 
-  sheet.getRange('C:C').setNumberFormat('yyyy/mm/dd hh:mm');
+  sheet.getRange('D:D').setNumberFormat('yyyy/mm/dd hh:mm');
   sheet.autoResizeColumns(1, CONFIG.HEADERS.length);
   applyConditionalFormatting_(sheet);
 }
@@ -56,6 +57,8 @@ function doGet(e) {
 
     if (action === 'slots') {
       result = { ok: true, booked: getBookedSlots_() };
+    } else if (action === 'memberDc') {
+      result = memberDc_(e.parameter.name);
     } else if (action === 'book') {
       result = book_({
         date: e.parameter.date,
@@ -98,12 +101,12 @@ function book_(input) {
     const dt = slotDate_(input.date, input.time);
 
     if (member) {
-      const state = String(sheet.getRange(member.row, 2).getValue() || '');
+      const state = String(sheet.getRange(member.row, 3).getValue() || '');
       if (state === '予約済' || state === '完了') {
         return { ok: false, message: 'このキャラクター名はすでに予約されています。' };
       }
 
-      sheet.getRange(member.row, 2, 1, 8).setValues([[
+      sheet.getRange(member.row, 3, 1, 8).setValues([[
         '予約済',
         dt,
         input.dc,
@@ -115,8 +118,9 @@ function book_(input) {
       ]]);
     } else {
       const row = Math.max(sheet.getLastRow() + 1, 2);
-      sheet.getRange(row, 1, 1, 9).setValues([[
+      sheet.getRange(row, 1, 1, 10).setValues([[
         '⚠ 未照合',
+        '',
         '要確認',
         dt,
         input.dc,
@@ -139,35 +143,35 @@ function applyManualLinks() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
-  const values = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+  const values = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
   const deletes = [];
 
   values.forEach((row, index) => {
     const rowNumber = index + 2;
     if (row[0] !== '⚠ 未照合') return;
 
-    const targetName = String(row[7] || '').trim();
+    const targetName = String(row[8] || '').trim();
     if (!targetName) return;
 
     const target = findMember_(sheet, normalizeName_(targetName));
     if (!target) {
-      sheet.getRange(rowNumber, 9).setValue('手動紐付け先がメンバー一覧に見つかりません');
+      sheet.getRange(rowNumber, 10).setValue('手動紐付け先がメンバー一覧に見つかりません');
       return;
     }
 
-    const targetState = String(sheet.getRange(target.row, 2).getValue() || '');
+    const targetState = String(sheet.getRange(target.row, 3).getValue() || '');
     if (targetState === '予約済' || targetState === '完了') {
-      sheet.getRange(rowNumber, 9).setValue('紐付け先はすでに予約済みです');
+      sheet.getRange(rowNumber, 10).setValue('紐付け先はすでに予約済みです');
       return;
     }
 
-    sheet.getRange(target.row, 2, 1, 8).setValues([[
+    sheet.getRange(target.row, 3, 1, 8).setValues([[
       '予約済',
-      row[2],
       row[3],
       row[4],
+      row[5],
       '手動一致',
-      row[6] || '未対応',
+      row[7] || '未対応',
       '',
       '未照合行から手動紐付け'
     ]]);
@@ -183,12 +187,12 @@ function getBookedSlots_() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
-  const rows = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  const rows = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
   const set = new Set();
 
   rows.forEach(row => {
-    const state = String(row[1] || '');
-    const value = row[2];
+    const state = String(row[2] || '');
+    const value = row[3];
 
     if (!value || !['予約済', '要確認', '完了'].includes(state)) return;
 
@@ -199,6 +203,19 @@ function getBookedSlots_() {
   });
 
   return Array.from(set).sort();
+}
+
+function memberDc_(name) {
+  const normalized = normalizeName_(name);
+  if (!normalized) return { ok: true, dc: '' };
+
+  const sheet = getSheet_();
+  const member = findMember_(sheet, normalized);
+  if (!member) return { ok: true, dc: '' };
+
+  const dc = String(sheet.getRange(member.row, 2).getDisplayValue() || '').trim();
+  const allowed = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
+  return { ok: true, dc: allowed.includes(dc) ? dc : '' };
 }
 
 function findMember_(sheet, normalizedName) {
@@ -269,7 +286,7 @@ function sanitizeCallback_(value) {
 }
 
 function applyConditionalFormatting_(sheet) {
-  const range = sheet.getRange('B2:B');
+  const range = sheet.getRange('C2:C');
   const rules = [
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('未予約').setBackground('#eeeeee').setRanges([range]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('予約済').setBackground('#d9ead3').setRanges([range]).build(),
