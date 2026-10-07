@@ -246,17 +246,31 @@ input:not([type="hidden"]):focus{
 .custom-select-menu{
   position:absolute;
   z-index:200;
-  left:0;right:0;
+  left:0;
+  right:0;
   top:calc(100% + 7px);
+  bottom:auto;
+  max-height:364px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
   padding:6px;
   background:linear-gradient(180deg,#2a3544,#202936);
   border:1px solid rgba(191,204,218,.30);
   border-radius:8px;
   box-shadow:0 16px 40px rgba(0,0,0,.45);
 }
+.custom-select-menu.open-up{
+  top:auto;
+  bottom:calc(100% + 7px);
+}
+.custom-select-menu::-webkit-scrollbar{width:10px}
+.custom-select-menu::-webkit-scrollbar-track{background:rgba(0,0,0,.18);border-radius:8px}
+.custom-select-menu::-webkit-scrollbar-thumb{background:rgba(170,190,210,.35);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
 .custom-select-option{
   width:100%;
-  min-height:42px;
+  height:44px;
+  min-height:44px;
   padding:9px 12px;
   border:0;
   border-radius:5px;
@@ -656,9 +670,34 @@ input:not([type="hidden"]):focus{
     });
   }
 
+  function positionDcSelectMenu(){
+    if(dcSelectMenu.classList.contains("hidden")) return;
+
+    const triggerRect=dcSelectTrigger.getBoundingClientRect();
+    const viewportHeight=window.innerHeight || document.documentElement.clientHeight;
+    const gap=7;
+    const edgeMargin=10;
+    const rowHeight=44;
+    const menuPadding=12;
+    const rowCount=dcSelectMenu.querySelectorAll(".custom-select-option").length;
+    const desiredHeight=Math.min(8,rowCount)*rowHeight+menuPadding;
+
+    const spaceBelow=Math.max(0,viewportHeight-triggerRect.bottom-gap-edgeMargin);
+    const spaceAbove=Math.max(0,triggerRect.top-gap-edgeMargin);
+
+    const openUp=spaceBelow<desiredHeight && spaceAbove>spaceBelow;
+    dcSelectMenu.classList.toggle("open-up",openUp);
+
+    const available=openUp ? spaceAbove : spaceBelow;
+    const maxHeight=Math.max(rowHeight+menuPadding,Math.min(desiredHeight,available));
+    dcSelectMenu.style.maxHeight=maxHeight+"px";
+  }
+
   function closeDcSelect(){
     dcSelect.classList.remove("open");
     dcSelectMenu.classList.add("hidden");
+    dcSelectMenu.classList.remove("open-up");
+    dcSelectMenu.style.maxHeight="";
     dcSelectTrigger.setAttribute("aria-expanded","false");
   }
 
@@ -667,6 +706,11 @@ input:not([type="hidden"]):focus{
     dcSelect.classList.toggle("open",opening);
     dcSelectMenu.classList.toggle("hidden",!opening);
     dcSelectTrigger.setAttribute("aria-expanded",opening ? "true" : "false");
+    if(opening){
+      positionDcSelectMenu();
+      const selectedOption=dcSelectMenu.querySelector(".custom-select-option.selected");
+      if(selectedOption) selectedOption.scrollIntoView({block:"nearest"});
+    }
   });
 
   document.querySelectorAll(".custom-select-option").forEach(btn=>{
@@ -684,6 +728,14 @@ input:not([type="hidden"]):focus{
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape") closeDcSelect();
   });
+
+  window.addEventListener("resize",()=>{
+    if(!dcSelectMenu.classList.contains("hidden")) positionDcSelectMenu();
+  });
+
+  window.addEventListener("scroll",()=>{
+    if(!dcSelectMenu.classList.contains("hidden")) positionDcSelectMenu();
+  },{passive:true});
 
   document.getElementById("bookingForm").addEventListener("submit",async e=>{
     e.preventDefault();
