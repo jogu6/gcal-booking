@@ -4,6 +4,7 @@ const CONFIG = {
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
   END_DATE: '2026-10-18',
+  FIRST_DAY_START_TIME: '18:00',
   START_MINUTE: 8 * 60,
   END_MINUTE: 24 * 60,
   SLOT_MINUTES: 30,
@@ -287,6 +288,10 @@ function validateBooking_(input) {
   const minute = h * 60 + m;
   if (minute < CONFIG.START_MINUTE || minute >= CONFIG.END_MINUTE || m % CONFIG.SLOT_MINUTES !== 0) {
     throw new Error('予約可能時間外です。');
+  }
+
+  if (input.date === CONFIG.START_DATE && input.time < CONFIG.FIRST_DAY_START_TIME) {
+    throw new Error('10月11日の予約受付は18:00からです。');
   }
 
   const now = new Date();
