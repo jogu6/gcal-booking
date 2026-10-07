@@ -292,12 +292,31 @@ input:not([type="hidden"]):focus{
   background:linear-gradient(90deg,rgba(199,170,112,.20),rgba(199,170,112,.07));
   color:#fff5dc;
 }
+.x-contact-panel{
+  margin:18px 0 20px;
+  padding:16px;
+  border:2px solid rgba(117,181,235,.62);
+  border-radius:10px;
+  background:linear-gradient(180deg,rgba(34,57,78,.72),rgba(24,40,56,.78));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 0 0 1px rgba(98,157,209,.10),
+    0 8px 24px rgba(0,0,0,.20);
+}
+.x-contact-panel .row{margin:0}
+.x-contact-panel .row + .row{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid rgba(139,190,233,.22);
+}
 .x-check-label{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:12px;
   cursor:pointer;
   user-select:none;
+  font-weight:700;
+  color:#f2f7fb;
 }
 .x-check{
   position:absolute;
@@ -305,13 +324,16 @@ input:not([type="hidden"]):focus{
   pointer-events:none;
 }
 .x-check-box{
-  width:22px;
-  height:22px;
-  flex:0 0 22px;
-  border:1px solid rgba(190,207,224,.42);
-  border-radius:5px;
-  background:linear-gradient(180deg,#202c39,#17212c);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  border:2px solid rgba(152,207,255,.82);
+  border-radius:6px;
+  background:linear-gradient(180deg,#28415a,#1a2b3c);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 0 3px rgba(103,173,232,.10),
+    0 3px 10px rgba(0,0,0,.28);
   position:relative;
 }
 .x-check:focus-visible + .x-check-box{
@@ -319,18 +341,22 @@ input:not([type="hidden"]):focus{
   outline-offset:2px;
 }
 .x-check:checked + .x-check-box{
-  border-color:rgba(208,185,130,.72);
-  background:linear-gradient(180deg,#8b7748,#6f5d36);
+  border-color:rgba(255,220,142,.95);
+  background:linear-gradient(180deg,#a58b4f,#785f30);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.18),
+    0 0 0 4px rgba(218,184,103,.16),
+    0 3px 12px rgba(0,0,0,.30);
 }
 .x-check:checked + .x-check-box::after{
   content:"";
   position:absolute;
-  left:6px;
-  top:2px;
-  width:7px;
-  height:12px;
-  border:solid #fff6d9;
-  border-width:0 2px 2px 0;
+  left:8px;
+  top:3px;
+  width:8px;
+  height:14px;
+  border:solid #fff9df;
+  border-width:0 3px 3px 0;
   transform:rotate(45deg);
 }
 .dc-choice-grid{
@@ -570,19 +596,21 @@ input:not([type="hidden"]):focus{
         </div>
       </div>
 
-      <div id="xPreferenceRow" class="row hidden">
-        <label class="x-check-label" for="useX">
-          <input id="useX" class="x-check" type="checkbox">
-          <span class="x-check-box" aria-hidden="true"></span>
-          <span>X でやりとりしたい場合はチェックしてください</span>
-        </label>
-        <div class="small">X でやりとりする場合は、@og_ff14 とDM（ダイレクトメッセージ）できる状態にして、当日の予約時間にXのDMをご確認ください。</div>
-      </div>
+      <div id="xContactPanel" class="x-contact-panel hidden">
+        <div id="xPreferenceRow" class="row">
+          <label class="x-check-label" for="useX">
+            <input id="useX" class="x-check" type="checkbox">
+            <span class="x-check-box" aria-hidden="true"></span>
+            <span>X でやりとりしたい場合はチェックしてください</span>
+          </label>
+          <div class="small">X でやりとりする場合は、@og_ff14 とDM（ダイレクトメッセージ）できる状態にして、当日の予約時間にXのDMをご確認ください。</div>
+        </div>
 
-      <div id="xAccountRow" class="row hidden">
-        <label for="xAccount">X アカウント名</label>
-        <input id="xAccount" maxlength="16" autocomplete="off" placeholder="@og_ff14 等">
-        <div class="small">半角英数字と「_」のみ。@は付けても付けなくても構いません。</div>
+        <div id="xAccountRow" class="row hidden">
+          <label for="xAccount">X アカウント名</label>
+          <input id="xAccount" maxlength="16" autocomplete="off" placeholder="@og_ff14 等">
+          <div class="small">半角英数字と「_」のみ。@は付けても付けなくても構いません。</div>
+        </div>
       </div>
 
       <button id="submitButton" class="primary" type="submit">この日時で予約する</button>
@@ -721,7 +749,7 @@ input:not([type="hidden"]):focus{
 
     verifiedMember=false;
     dcRow.classList.add("hidden");
-    xPreferenceRow.classList.add("hidden");
+    xContactPanel.classList.add("hidden");
     xAccountRow.classList.add("hidden");
     
     setDcValue("");
@@ -756,7 +784,7 @@ input:not([type="hidden"]):focus{
       if(result.sourceStatus==="予約済"){
         setXEnabled(!!result.useX,result.xAccount || "");
       }
-      xPreferenceRow.classList.remove("hidden");
+      xContactPanel.classList.remove("hidden");
       xAccountRow.classList.toggle("hidden",!useX.checked);
 
       const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
@@ -967,7 +995,7 @@ input:not([type="hidden"]):focus{
     
     setDcValue("");
     setXEnabled(false);
-    xPreferenceRow.classList.add("hidden");
+    xContactPanel.classList.add("hidden");
 
     const card=document.getElementById("formCard");
     card.classList.remove("hidden");
@@ -976,6 +1004,7 @@ input:not([type="hidden"]):focus{
 
 
   const dcInput=document.getElementById("dc");
+  const xContactPanel=document.getElementById("xContactPanel");
   const xPreferenceRow=document.getElementById("xPreferenceRow");
   const useX=document.getElementById("useX");
   const xAccountRow=document.getElementById("xAccountRow");
@@ -1194,7 +1223,7 @@ input:not([type="hidden"]):focus{
       document.getElementById("characterName").value="";
       setDcValue("");
       setXEnabled(false);
-      xPreferenceRow.classList.add("hidden");
+      xContactPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
       scrollToSlot(bookedKey);
       setTimeout(openBookingSuccess,350);
