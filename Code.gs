@@ -16,7 +16,7 @@ const CONFIG = {
   MEMBER_FIRST_DATA_ROW: 4,
   MEMBER_COL_NAME: 2,
   MEMBER_COL_HOME: 3,
-  MEMBER_COL_STATUS: 6,
+  MEMBER_COL_STATUS: 4,
 
   // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC
   // E=X利用 F=Xアカウント名 G=更新日時
