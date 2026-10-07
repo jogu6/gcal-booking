@@ -14,9 +14,19 @@ main{position:relative;z-index:1;width:min(980px,calc(100% - 20px));margin:18px 
 .hero>*{position:relative;z-index:1}
 h1{font-size:25px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}p,li{line-height:1.8}.hero p,.small{color:var(--muted)}.notice{padding:14px 16px;background:rgba(143,194,255,.10);border:1px solid rgba(143,194,255,.18);border-radius:12px;margin:16px 0}.small{font-size:13px}
 .day{margin-bottom:24px}.day-title{font-weight:700;font-size:17px;margin-bottom:10px}.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-button.slot{min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.03);color:var(--text);font-size:14px;cursor:pointer}button.slot:hover:not(:disabled){background:rgba(143,194,255,.12);border-color:rgba(143,194,255,.34)}button.slot.booked{background:rgba(255,255,255,.05);color:#95a0ac;cursor:default}button.slot.selected{background:linear-gradient(var(--accent),var(--accent2));color:#0d1724;border-color:transparent;font-weight:700}
-.hidden{display:none!important}.row{margin-bottom:17px}label{display:block;font-weight:700;margin-bottom:7px}input,select{width:100%;min-height:48px;padding:10px 12px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);font-size:16px;outline:none}input::placeholder{color:#94a1ae}input:focus,select:focus{border-color:rgba(143,194,255,.45);box-shadow:0 0 0 3px rgba(143,194,255,.14)}
-.chosen{padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-weight:700}.primary{width:100%;min-height:52px;border:0;border-radius:10px;background:linear-gradient(var(--accent),var(--accent2));color:#0f1723;font-size:16px;font-weight:700;cursor:pointer}.primary:disabled{opacity:.6}
+button.slot{-webkit-appearance:none;appearance:none;min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.03);color:var(--text);font-size:14px;cursor:pointer}button.slot:hover:not(:disabled){background:rgba(143,194,255,.12);border-color:rgba(143,194,255,.34)}button.slot.booked{background:rgba(255,255,255,.05);color:#95a0ac;cursor:default}button.slot.selected{background:linear-gradient(var(--accent),var(--accent2));color:#0d1724;border-color:transparent;font-weight:700}
+.hidden{display:none!important}.row{margin-bottom:17px}label{display:block;font-weight:700;margin-bottom:7px}button,input{font:inherit;-webkit-appearance:none;appearance:none}input:not([type="hidden"]){width:100%;min-height:48px;padding:10px 12px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);font-size:16px;outline:none}input::placeholder{color:#94a1ae}input:not([type="hidden"]):focus{border-color:rgba(143,194,255,.45);box-shadow:0 0 0 3px rgba(143,194,255,.14)}
+.custom-select{position:relative}
+.custom-select-trigger{width:100%;min-height:48px;padding:10px 14px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer;outline:none;text-align:left}
+.custom-select-trigger:hover{background:rgba(255,255,255,.065);border-color:rgba(143,194,255,.26)}
+.custom-select-trigger:focus{border-color:rgba(143,194,255,.45);box-shadow:0 0 0 3px rgba(143,194,255,.14)}
+.custom-select-arrow{width:10px;height:10px;border-right:2px solid #a9c8ec;border-bottom:2px solid #a9c8ec;transform:rotate(45deg) translateY(-2px);flex:0 0 auto}
+.custom-select.open .custom-select-arrow{transform:rotate(225deg) translate(-2px,-2px)}
+.custom-select-menu{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 8px);padding:7px;background:#27313d;border:1px solid rgba(143,194,255,.22);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.38);overflow:hidden}
+.custom-select-option{width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:#eaf2fa;text-align:left;cursor:pointer;outline:none}
+.custom-select-option:hover,.custom-select-option:focus{background:rgba(143,194,255,.13)}
+.custom-select-option.selected{background:linear-gradient(90deg,rgba(143,194,255,.20),rgba(93,143,214,.10));color:#fff}
+.chosen{padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-weight:700}.primary{-webkit-appearance:none;appearance:none;width:100%;min-height:52px;border:0;border-radius:10px;background:linear-gradient(var(--accent),var(--accent2));color:#0f1723;font-size:16px;font-weight:700;cursor:pointer}.primary:disabled{opacity:.6}
 .message{padding:13px 14px;border-radius:10px;margin-top:14px}.success{background:rgba(159,214,174,.12);color:#d7f2de}.error{background:rgba(255,176,176,.10);color:#ffd4d4}.loading{padding:18px;text-align:center;color:var(--muted)}
 .processing-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(12,16,21,.58);backdrop-filter:blur(4px)}
 .processing-box{display:flex;align-items:center;gap:14px;padding:18px 22px;border-radius:14px;background:rgba(39,47,58,.97);border:1px solid rgba(255,255,255,.10);box-shadow:0 14px 40px rgba(0,0,0,.32);font-weight:700}
@@ -81,14 +91,20 @@ button.slot{min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius
       </div>
 
       <div id="dcRow" class="row hidden">
-        <label for="dc">集合希望DC</label>
-        <select id="dc">
-          <option value="">選択してください</option>
-          <option>Elemental</option>
-          <option>Gaia</option>
-          <option>Mana</option>
-          <option>Meteor</option>
-        </select>
+        <label>集合希望DC</label>
+        <input type="hidden" id="dc" value="">
+        <div class="custom-select" id="dcSelect">
+          <button type="button" class="custom-select-trigger" id="dcSelectTrigger" aria-haspopup="listbox" aria-expanded="false">
+            <span id="dcSelectLabel">選択してください</span>
+            <span class="custom-select-arrow" aria-hidden="true"></span>
+          </button>
+          <div class="custom-select-menu hidden" id="dcSelectMenu" role="listbox" aria-label="集合希望DC">
+            <button type="button" class="custom-select-option" data-value="Elemental" role="option">Elemental</button>
+            <button type="button" class="custom-select-option" data-value="Gaia" role="option">Gaia</button>
+            <button type="button" class="custom-select-option" data-value="Mana" role="option">Mana</button>
+            <button type="button" class="custom-select-option" data-value="Meteor" role="option">Meteor</button>
+          </div>
+        </div>
       </div>
 
       <button id="submitButton" class="primary" type="submit">この日時で予約する</button>
@@ -165,7 +181,7 @@ button.slot{min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius
     verifiedMember=false;
     dcRow.classList.add("hidden");
     dc.required=false;
-    dc.value="";
+    setDcValue("");
 
     if(!validName(name)){
       showMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
@@ -194,7 +210,7 @@ button.slot{min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius
       if(needsDc){
         dcRow.classList.remove("hidden");
         dc.required=true;
-        if(result.dc) dc.value=result.dc;
+        if(result.dc) setDcValue(result.dc);
       }
 
       const message=document.getElementById("message");
@@ -323,12 +339,58 @@ button.slot{min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius
     verifiedMember=false;
     dcRow.classList.add("hidden");
     dc.required=false;
-    dc.value="";
+    setDcValue("");
 
     const card=document.getElementById("formCard");
     card.classList.remove("hidden");
     card.scrollIntoView({behavior:"smooth",block:"start"});
   }
+
+
+  const dcSelect=document.getElementById("dcSelect");
+  const dcSelectTrigger=document.getElementById("dcSelectTrigger");
+  const dcSelectMenu=document.getElementById("dcSelectMenu");
+  const dcSelectLabel=document.getElementById("dcSelectLabel");
+  const dcInput=document.getElementById("dc");
+
+  function setDcValue(value){
+    dcInput.value=value || "";
+    dcSelectLabel.textContent=value || "選択してください";
+    document.querySelectorAll(".custom-select-option").forEach(btn=>{
+      const selected=btn.dataset.value===value;
+      btn.classList.toggle("selected",selected);
+      btn.setAttribute("aria-selected",selected ? "true" : "false");
+    });
+  }
+
+  function closeDcSelect(){
+    dcSelect.classList.remove("open");
+    dcSelectMenu.classList.add("hidden");
+    dcSelectTrigger.setAttribute("aria-expanded","false");
+  }
+
+  dcSelectTrigger.addEventListener("click",()=>{
+    const opening=dcSelectMenu.classList.contains("hidden");
+    dcSelect.classList.toggle("open",opening);
+    dcSelectMenu.classList.toggle("hidden",!opening);
+    dcSelectTrigger.setAttribute("aria-expanded",opening ? "true" : "false");
+  });
+
+  document.querySelectorAll(".custom-select-option").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      setDcValue(btn.dataset.value);
+      closeDcSelect();
+      dcSelectTrigger.focus();
+    });
+  });
+
+  document.addEventListener("click",e=>{
+    if(!dcSelect.contains(e.target)) closeDcSelect();
+  });
+
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape") closeDcSelect();
+  });
 
   document.getElementById("bookingForm").addEventListener("submit",async e=>{
     e.preventDefault();
@@ -366,7 +428,7 @@ button.slot{min-height:48px;border:1px solid rgba(255,255,255,.10);border-radius
       showMessage("予約しました。","success");
       selected=null;
       document.getElementById("characterName").value="";
-      document.getElementById("dc").value="";
+      setDcValue("");
       setTimeout(()=>document.getElementById("formCard").classList.add("hidden"),1200);
     }catch(err){
       showMessage(err.message || "予約できませんでした。","error");
