@@ -57,8 +57,8 @@ function doGet(e) {
 
     if (action === 'slots') {
       result = { ok: true, booked: getBookedSlots_() };
-    } else if (action === 'memberDc') {
-      result = memberDc_(e.parameter.name);
+    } else if (action === 'member') {
+      result = member_(e.parameter.name);
     } else if (action === 'book') {
       result = book_({
         date: e.parameter.date,
@@ -100,37 +100,28 @@ function book_(input) {
     const member = findMember_(sheet, normalizedInput);
     const dt = slotDate_(input.date, input.time);
 
-    if (member) {
-      const state = String(sheet.getRange(member.row, 3).getValue() || '');
-      if (state === '予約済' || state === '完了') {
-        return { ok: false, message: 'このキャラクター名はすでに予約されています。' };
-      }
-
-      sheet.getRange(member.row, 3, 1, 8).setValues([[
-        '予約済',
-        dt,
-        input.dc,
-        input.name,
-        '自動一致',
-        '未対応',
-        '',
-        ''
-      ]]);
-    } else {
-      const row = Math.max(sheet.getLastRow() + 1, 2);
-      sheet.getRange(row, 1, 1, 10).setValues([[
-        '⚠ 未照合',
-        '',
-        '要確認',
-        dt,
-        input.dc,
-        input.name,
-        '要確認',
-        '未対応',
-        '',
-        'メンバー一覧と自動一致しません'
-      ]]);
+    if (!member) {
+      return {
+        ok: false,
+        message: '名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。'
+      };
     }
+
+    const state = String(sheet.getRange(member.row, 3).getValue() || '');
+    if (state === '予約済' || state === '完了') {
+      return { ok: false, message: 'このキャラクター名はすでに予約されています。' };
+    }
+
+    sheet.getRange(member.row, 3, 1, 8).setValues([[
+      '予約済',
+      dt,
+      input.dc,
+      input.name,
+      '自動一致',
+      '未対応',
+      '',
+      ''
+    ]]);
 
     return { ok: true };
   } finally {
@@ -205,17 +196,22 @@ function getBookedSlots_() {
   return Array.from(set).sort();
 }
 
-function memberDc_(name) {
+function member_(name) {
   const normalized = normalizeName_(name);
-  if (!normalized) return { ok: true, dc: '' };
+  if (!normalized) return { ok: true, found: false, dc: '' };
 
   const sheet = getSheet_();
   const member = findMember_(sheet, normalized);
-  if (!member) return { ok: true, dc: '' };
+  if (!member) return { ok: true, found: false, dc: '' };
 
   const dc = String(sheet.getRange(member.row, 2).getDisplayValue() || '').trim();
   const allowed = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
-  return { ok: true, dc: allowed.includes(dc) ? dc : '' };
+
+  return {
+    ok: true,
+    found: true,
+    dc: allowed.includes(dc) ? dc : ''
+  };
 }
 
 function findMember_(sheet, normalizedName) {
