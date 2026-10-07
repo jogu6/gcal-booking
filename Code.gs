@@ -196,6 +196,7 @@ function cancel_(name) {
     sheet.getRange(member.row, CONFIG.COL_DATE).clearContent();
     sheet.getRange(member.row, CONFIG.COL_TIME).clearContent();
     sheet.getRange(member.row, CONFIG.COL_MEETING_DC).clearContent();
+    updateXNote_(sheet, member.row, false, '');
     sheet.getRange(member.row, CONFIG.COL_STATUS).setValue('未招待');
 
     return { ok: true, oldKey: oldKey };
