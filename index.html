@@ -570,7 +570,7 @@ input:not([type="hidden"]):focus{
         </div>
       </div>
 
-      <div class="row">
+      <div id="xPreferenceRow" class="row hidden">
         <label class="x-check-label" for="useX">
           <input id="useX" class="x-check" type="checkbox">
           <span class="x-check-box" aria-hidden="true"></span>
@@ -721,6 +721,8 @@ input:not([type="hidden"]):focus{
 
     verifiedMember=false;
     dcRow.classList.add("hidden");
+    xPreferenceRow.classList.add("hidden");
+    xAccountRow.classList.add("hidden");
     
     setDcValue("");
 
@@ -754,6 +756,8 @@ input:not([type="hidden"]):focus{
       if(result.sourceStatus==="予約済"){
         setXEnabled(!!result.useX,result.xAccount || "");
       }
+      xPreferenceRow.classList.remove("hidden");
+      xAccountRow.classList.toggle("hidden",!useX.checked);
 
       const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
       if(needsDc){
@@ -953,6 +957,7 @@ input:not([type="hidden"]):focus{
     
     setDcValue("");
     setXEnabled(false);
+    xPreferenceRow.classList.add("hidden");
 
     const card=document.getElementById("formCard");
     card.classList.remove("hidden");
@@ -961,6 +966,7 @@ input:not([type="hidden"]):focus{
 
 
   const dcInput=document.getElementById("dc");
+  const xPreferenceRow=document.getElementById("xPreferenceRow");
   const useX=document.getElementById("useX");
   const xAccountRow=document.getElementById("xAccountRow");
   const xAccountInput=document.getElementById("xAccount");
@@ -1198,6 +1204,7 @@ input:not([type="hidden"]):focus{
       document.getElementById("characterName").value="";
       setDcValue("");
       setXEnabled(false);
+      xPreferenceRow.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
       scrollToSlot(bookedKey);
       setTimeout(openBookingSuccess,350);
