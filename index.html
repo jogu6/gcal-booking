@@ -150,9 +150,14 @@ button.slot:hover:not(:disabled){
 }
 button.slot.booked,button.slot.past{font-size:15px}
 button.slot.booked{
-  background:rgba(255,255,255,.05);
-  color:#95a0ac;
+  background:linear-gradient(180deg,rgba(138,72,72,.88),rgba(94,48,48,.92));
+  color:#fff1f1;
+  border-color:rgba(232,148,148,.55);
   cursor:default;
+  font-weight:700;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 0 0 1px rgba(196,101,101,.08);
 }
 button.slot.past{
   background:rgba(0,0,0,.14);
