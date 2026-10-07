@@ -293,8 +293,29 @@ function validateBooking_(input) {
   const nowDate = Utilities.formatDate(now, CONFIG.TIME_ZONE, 'yyyy-MM-dd');
   const nowTime = Utilities.formatDate(now, CONFIG.TIME_ZONE, 'HH:mm');
 
-  if (input.date < nowDate || (input.date === nowDate && input.time <= nowTime)) {
-    throw new Error('予約時刻を過ぎています。別の時刻を選択してください。');
+  const nowParts = nowDate.split('-').map(Number);
+  const nowTimeParts = nowTime.split(':').map(Number);
+  const jstNowMs = Date.UTC(
+    nowParts[0],
+    nowParts[1] - 1,
+    nowParts[2],
+    nowTimeParts[0],
+    nowTimeParts[1]
+  );
+  const earliestMs = jstNowMs + 60 * 60 * 1000;
+
+  const dateParts = input.date.split('-').map(Number);
+  const timeParts = input.time.split(':').map(Number);
+  const slotMs = Date.UTC(
+    dateParts[0],
+    dateParts[1] - 1,
+    dateParts[2],
+    timeParts[0],
+    timeParts[1]
+  );
+
+  if (slotMs < earliestMs) {
+    throw new Error('予約は現在時刻の1時間後以降を選択してください。');
   }
 
   const normalized = normalizeName_(input.name);
