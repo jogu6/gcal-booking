@@ -15,7 +15,9 @@ const CONFIG = {
     '予約時入力名',
     '名前照合',
     '対応状況',
-    '手動紐付け先',
+    '確認済み',
+    '元ステータス',
+    '所属ワールド',
     '備考'
   ]
 };
@@ -24,7 +26,6 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('予約管理')
     .addItem('初期設定・表示更新', 'setupSheet')
-    .addItem('手動紐付けを反映', 'applyManualLinks')
     .addToUi();
 }
 
@@ -104,6 +105,16 @@ function book_(input) {
       return {
         ok: false,
         message: '名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。'
+      };
+    }
+
+    const sourceStatus = String(sheet.getRange(member.row, 10).getDisplayValue() || '').trim();
+    if (sourceStatus !== '未招待') {
+      return {
+        ok: false,
+        message: sourceStatus === '登録完了'
+          ? 'このキャラクターはすでに登録完了しています。'
+          : 'このキャラクターは招待不要になっています。'
       };
     }
 
@@ -206,11 +217,15 @@ function member_(name) {
 
   const dc = String(sheet.getRange(member.row, 2).getDisplayValue() || '').trim();
   const allowed = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
+  const sourceStatus = String(sheet.getRange(member.row, 10).getDisplayValue() || '').trim();
+  const eligible = sourceStatus === '未招待';
 
   return {
     ok: true,
     found: true,
-    dc: allowed.includes(dc) ? dc : ''
+    dc: allowed.includes(dc) ? dc : '',
+    eligible: eligible,
+    sourceStatus: sourceStatus
   };
 }
 
