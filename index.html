@@ -597,9 +597,9 @@ input:not([type="hidden"]):focus{
       <label for="cancelCharacterName">キャラクターフルネーム</label>
       <input id="cancelCharacterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb">
     </div>
-    <div id="cancelDetails" class="cancel-details hidden">
-      <div id="cancelDc" class="cancel-dc"></div>
-      <button id="cancelBookingButton" type="button" class="cancel-button"></button>
+    <div id="cancelDetails" class="cancel-details">
+      <div id="cancelDc" class="cancel-dc hidden"></div>
+      <button id="cancelBookingButton" type="button" class="cancel-button">予約を検索します</button>
     </div>
     <div id="cancelMessage"></div>
   </section>
@@ -1034,12 +1034,15 @@ input:not([type="hidden"]):focus{
     cancelButton.classList.remove("confirming");
     if(cancelMember){
       cancelButton.textContent=`${formatCancelDate(cancelMember.bookingDate,cancelMember.bookingTime)} の予約を取り消す`;
+    }else{
+      cancelButton.textContent="予約を検索します";
     }
   }
 
   function clearCancelLookup(){
     cancelMember=null;
-    cancelDetails.classList.add("hidden");
+    cancelDc.classList.add("hidden");
+    cancelDc.textContent="";
     cancelMessage.className="";
     cancelMessage.textContent="";
     resetCancelConfirm();
@@ -1070,7 +1073,7 @@ input:not([type="hidden"]):focus{
       cancelMember=result;
       const dcText=result.meetingDc || result.dc || "DC指定なし";
       cancelDc.textContent="集合DC: "+dcText;
-      cancelDetails.classList.remove("hidden");
+      cancelDc.classList.remove("hidden");
       resetCancelConfirm();
 
     }catch(_){
@@ -1082,16 +1085,16 @@ input:not([type="hidden"]):focus{
     if(cancelMember) clearCancelLookup();
   });
 
-  cancelNameInput.addEventListener("blur",e=>{
-    if(e.relatedTarget===cancelButton) return;
-    lookupCancellation();
-  });
-
   cancelButton.addEventListener("click",async()=>{
-    if(!cancelMember) return;
+    // Initial click: search the reservation by name.
+    if(!cancelMember){
+      await lookupCancellation();
+      return;
+    }
 
     const now=Date.now();
 
+    // First cancellation click: re-check latest reservation state, then open 2-second confirmation.
     if(now>cancelConfirmUntil){
       cancelButton.disabled=true;
       try{
@@ -1111,6 +1114,7 @@ input:not([type="hidden"]):focus{
           cancelMember=latest;
           const dcText=latest.meetingDc || latest.dc || "DC指定なし";
           cancelDc.textContent="集合DC: "+dcText;
+          cancelDc.classList.remove("hidden");
           resetCancelConfirm();
           showCancelMessage("予約内容が変更されています。表示内容を更新しました。もう一度確認してください。","error");
           await loadSlots();
@@ -1132,6 +1136,7 @@ input:not([type="hidden"]):focus{
       return;
     }
 
+    // Second click within 2 seconds: actually cancel.
     if(cancelConfirmTimer){
       clearTimeout(cancelConfirmTimer);
       cancelConfirmTimer=null;
