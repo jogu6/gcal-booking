@@ -52,7 +52,7 @@ main{
 }
 .card{
   position:relative;
-  overflow:hidden;
+  overflow:visible;
   background:
     linear-gradient(180deg,rgba(48,61,78,.82),rgba(35,45,59,.86));
   border:1px solid rgba(194,208,223,.42);
@@ -67,6 +67,7 @@ main{
 }
 
 .hero{
+  overflow:hidden;
   min-height:220px;
   background:
     linear-gradient(180deg,rgba(52,66,84,.80),rgba(37,48,62,.84));
@@ -211,7 +212,7 @@ input:not([type="hidden"]):focus{
 .primary:hover{filter:brightness(1.08)}
 .primary:active{transform:translateY(1px)}
 .primary:disabled{opacity:.55;cursor:default}
-.custom-select{position:relative}
+.custom-select{position:relative;z-index:80}
 .custom-select-trigger{
   width:100%;
   min-height:48px;
@@ -244,7 +245,7 @@ input:not([type="hidden"]):focus{
 .custom-select.open .custom-select-arrow{transform:rotate(225deg) translate(-2px,-2px)}
 .custom-select-menu{
   position:absolute;
-  z-index:60;
+  z-index:200;
   left:0;right:0;
   top:calc(100% + 7px);
   padding:6px;
@@ -310,6 +311,7 @@ input:not([type="hidden"]):focus{
   animation:spin .8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+#formCard{position:relative;z-index:20}
 @media(max-width:600px){
   main{width:min(100% - 12px,1040px);margin-top:8px}
   .card{padding:16px;border-radius:8px}
