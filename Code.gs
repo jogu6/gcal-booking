@@ -38,6 +38,8 @@ function doGet(e) {
         name: e.parameter.name,
         dc: e.parameter.dc || ''
       });
+    } else if (action === 'cancel') {
+      result = cancel_(e.parameter.name);
     } else {
       result = { ok: false, message: '不明な処理です。' };
     }
@@ -63,15 +65,25 @@ function member_(name) {
   if (!member) return { ok: true, found: false, dc: '' };
 
   const home = String(sheet.getRange(member.row, CONFIG.COL_HOME).getDisplayValue() || '').trim();
-  const dc = home.includes('/') ? home.split('/')[0] : home;
+  const homeDc = home.includes('/') ? home.split('/')[0] : home;
   const status = String(sheet.getRange(member.row, CONFIG.COL_STATUS).getDisplayValue() || '').trim();
+  const dateText = String(sheet.getRange(member.row, CONFIG.COL_DATE).getDisplayValue() || '').trim();
+  const timeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
+  const bookingDate = normalizeSheetDate_(dateText);
+  const meetingDc = String(sheet.getRange(member.row, CONFIG.COL_MEETING_DC).getDisplayValue() || '').trim();
+  const hasBooking = status === '予約済' && !!bookingDate && !!timeText;
 
   return {
     ok: true,
     found: true,
-    dc: ['Elemental','Gaia','Mana','Meteor'].includes(dc) ? dc : '',
-    eligible: status === '未招待',
-    sourceStatus: status
+    dc: ['Elemental','Gaia','Mana','Meteor'].includes(homeDc) ? homeDc : '',
+    meetingDc: ['Elemental','Gaia','Mana','Meteor'].includes(meetingDc) ? meetingDc : '',
+    eligible: status === '未招待' || status === '予約済',
+    sourceStatus: status,
+    canCancel: hasBooking,
+    bookingDate: hasBooking ? bookingDate : '',
+    bookingTime: hasBooking ? timeText : '',
+    bookingKey: hasBooking ? bookingDate + ' ' + timeText : ''
   };
 }
 
@@ -83,12 +95,8 @@ function book_(input) {
 
   try {
     const sheet = getSheet_();
-
-    if (getBookedSlots_().includes(input.date + ' ' + input.time)) {
-      return { ok: false, message: 'この時間は先に予約されました。別の時間を選んでください。' };
-    }
-
     const member = findMember_(sheet, normalizeName_(input.name));
+
     if (!member) {
       return {
         ok: false,
@@ -101,20 +109,35 @@ function book_(input) {
     if (status === '登録完了') {
       return { ok: false, message: 'このキャラクターはすでに登録完了しています。' };
     }
-
     if (status === '招待不要') {
       return {
         ok: false,
         message: 'このキャラクターは今回の予約対象ではありません。サブキャラの場合は、メインキャラでご予約ください。'
       };
     }
-
-    if (status === '予約済' || status === '招待済み') {
-      return { ok: false, message: 'このキャラクターはすでに予約済みです。' };
+    if (status === '招待済み') {
+      return { ok: false, message: 'このキャラクターはすでに招待済みです。' };
+    }
+    if (status !== '未招待' && status !== '予約済') {
+      return { ok: false, message: 'このキャラクターは現在予約できません。' };
     }
 
-    if (status !== '未招待') {
-      return { ok: false, message: 'このキャラクターは現在予約できません。' };
+    const currentDateText = String(sheet.getRange(member.row, CONFIG.COL_DATE).getDisplayValue() || '').trim();
+    const currentTimeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
+    const currentDate = normalizeSheetDate_(currentDateText);
+    const currentKey = status === '予約済' && currentDate && currentTimeText
+      ? currentDate + ' ' + currentTimeText
+      : '';
+
+    const requestedKey = input.date + ' ' + input.time;
+    const booked = getBookedSlots_();
+
+    if (booked.includes(requestedKey) && requestedKey !== currentKey) {
+      return {
+        ok: false,
+        code: 'SLOT_TAKEN',
+        message: 'この時間は先に予約されました。別の時間を選んでください。'
+      };
     }
 
     const dateText = input.date.slice(5).replace('-', '/');
@@ -123,7 +146,52 @@ function book_(input) {
     sheet.getRange(member.row, CONFIG.COL_STATUS).setValue('予約済');
     sheet.getRange(member.row, CONFIG.COL_MEETING_DC).setValue(input.dc || '');
 
-    return { ok: true };
+    return {
+      ok: true,
+      oldKey: currentKey,
+      bookedKey: requestedKey
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function cancel_(name) {
+  const normalized = normalizeName_(name);
+  if (!normalized) {
+    return { ok: false, message: 'キャラクターフルネームを入力してください。' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const sheet = getSheet_();
+    const member = findMember_(sheet, normalized);
+
+    if (!member) {
+      return {
+        ok: false,
+        message: '名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。'
+      };
+    }
+
+    const status = String(sheet.getRange(member.row, CONFIG.COL_STATUS).getDisplayValue() || '').trim();
+    if (status !== '予約済') {
+      return { ok: false, message: '取り消せる予約がありません。' };
+    }
+
+    const dateText = String(sheet.getRange(member.row, CONFIG.COL_DATE).getDisplayValue() || '').trim();
+    const timeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
+    const bookingDate = normalizeSheetDate_(dateText);
+    const oldKey = bookingDate && timeText ? bookingDate + ' ' + timeText : '';
+
+    sheet.getRange(member.row, CONFIG.COL_DATE).clearContent();
+    sheet.getRange(member.row, CONFIG.COL_TIME).clearContent();
+    sheet.getRange(member.row, CONFIG.COL_MEETING_DC).clearContent();
+    sheet.getRange(member.row, CONFIG.COL_STATUS).setValue('未招待');
+
+    return { ok: true, oldKey: oldKey };
   } finally {
     lock.releaseLock();
   }
@@ -141,7 +209,9 @@ function getBookedSlots_() {
   values.forEach(row => {
     const dateText = String(row[0] || '').trim();
     const timeText = normalizeTime_(String(row[1] || '').trim());
+    const status = String(row[2] || '').trim();
     if (!dateText || !timeText) return;
+    if (!['予約済','招待済み','登録完了'].includes(status)) return;
 
     const date = normalizeSheetDate_(dateText);
     if (!date || date < CONFIG.START_DATE || date > CONFIG.END_DATE) return;
