@@ -191,6 +191,14 @@
         return false;
       }
 
+      if(result.eligible === false){
+        const msg = result.sourceStatus === "登録完了"
+          ? "このキャラクターはすでに登録完了しています。"
+          : "このキャラクターは招待不要になっています。";
+        showMessage(msg,"error");
+        return false;
+      }
+
       verifiedMember=true;
 
       const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
