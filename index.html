@@ -1094,45 +1094,13 @@ input:not([type="hidden"]):focus{
 
     const now=Date.now();
 
-    // First cancellation click: re-check latest reservation state, then open 2-second confirmation.
+    // First cancellation click: only switch to the 2-second confirmation state.
     if(now>cancelConfirmUntil){
-      cancelButton.disabled=true;
-      try{
-        const latest=await jsonp(
-          {action:"member",name:cancelNameInput.value},
-          "予約状況を確認しています…"
-        );
-
-        if(!latest.ok || !latest.found || !latest.canCancel){
-          clearCancelLookup();
-          showCancelMessage("取り消せる予約がありません。","error");
-          await loadSlots();
-          return;
-        }
-
-        if(latest.bookingKey!==cancelMember.bookingKey){
-          cancelMember=latest;
-          const dcText=latest.meetingDc || latest.dc || "DC指定なし";
-          cancelDc.textContent="集合DC: "+dcText;
-          cancelDc.classList.remove("hidden");
-          resetCancelConfirm();
-          showCancelMessage("予約内容が変更されています。表示内容を更新しました。もう一度確認してください。","error");
-          await loadSlots();
-          return;
-        }
-
-        cancelMember=latest;
-        cancelConfirmUntil=Date.now()+2000;
-        cancelButton.classList.add("confirming");
-        cancelButton.textContent="予約を取り消してよろしいですか?";
-        if(cancelConfirmTimer) clearTimeout(cancelConfirmTimer);
-        cancelConfirmTimer=setTimeout(resetCancelConfirm,2000);
-      }catch(_){
-        showCancelMessage("予約状況の確認に失敗しました。もう一度お試しください。","error");
-        resetCancelConfirm();
-      }finally{
-        cancelButton.disabled=false;
-      }
+      cancelConfirmUntil=now+2000;
+      cancelButton.classList.add("confirming");
+      cancelButton.textContent="予約を取り消してよろしいですか?";
+      if(cancelConfirmTimer) clearTimeout(cancelConfirmTimer);
+      cancelConfirmTimer=setTimeout(resetCancelConfirm,2000);
       return;
     }
 
