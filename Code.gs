@@ -1,6 +1,10 @@
 const CONFIG = {
-  SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
-  SHEET_NAME: '招待状況',
+  MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
+  MEMBER_SHEET_NAME: '招待状況',
+
+  RESERVATION_SPREADSHEET_ID: '12mdeeY6y6xWv71CQdhxQCRxSI19oRPpTMkhlIIFX1vo',
+  RESERVATION_SHEET_NAME: '予約管理',
+
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
   END_DATE: '2026-10-18',
@@ -8,17 +12,22 @@ const CONFIG = {
   START_MINUTE: 8 * 60,
   END_MINUTE: 24 * 60,
   SLOT_MINUTES: 30,
-  FIRST_DATA_ROW: 4,
 
-  // A:確認済み B:キャラクター名 C:DC名/ワールド名
-  // D:招待日 E:招待時刻 F:ステータス G:備考 H:集合DC
-  COL_NAME: 2,
-  COL_HOME: 3,
-  COL_DATE: 4,
-  COL_TIME: 5,
-  COL_STATUS: 6,
-  COL_NOTE: 7,
-  COL_MEETING_DC: 8
+  MEMBER_FIRST_DATA_ROW: 4,
+  MEMBER_COL_NAME: 2,
+  MEMBER_COL_HOME: 3,
+  MEMBER_COL_STATUS: 6,
+
+  // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC
+  // E=X利用 F=Xアカウント名 G=更新日時
+  RES_FIRST_DATA_ROW: 2,
+  RES_COL_NAME: 1,
+  RES_COL_DATE: 2,
+  RES_COL_TIME: 3,
+  RES_COL_MEETING_DC: 4,
+  RES_COL_USE_X: 5,
+  RES_COL_X_ACCOUNT: 6,
+  RES_COL_UPDATED_AT: 7
 };
 
 function doGet(e) {
@@ -63,34 +72,37 @@ function member_(name) {
   const normalized = normalizeName_(name);
   if (!normalized) return { ok: true, found: false, dc: '' };
 
-  const sheet = getSheet_();
-  const member = findMember_(sheet, normalized);
+  const memberSheet = getMemberSheet_();
+  const member = findMember_(memberSheet, normalized);
   if (!member) return { ok: true, found: false, dc: '' };
 
-  const home = String(sheet.getRange(member.row, CONFIG.COL_HOME).getDisplayValue() || '').trim();
+  const home = String(
+    memberSheet.getRange(member.row, CONFIG.MEMBER_COL_HOME).getDisplayValue() || ''
+  ).trim();
   const homeDc = home.includes('/') ? home.split('/')[0] : home;
-  const status = String(sheet.getRange(member.row, CONFIG.COL_STATUS).getDisplayValue() || '').trim();
-  const dateText = String(sheet.getRange(member.row, CONFIG.COL_DATE).getDisplayValue() || '').trim();
-  const timeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
-  const bookingDate = normalizeSheetDate_(dateText);
-  const meetingDc = String(sheet.getRange(member.row, CONFIG.COL_MEETING_DC).getDisplayValue() || '').trim();
-  const note = String(sheet.getRange(member.row, CONFIG.COL_NOTE).getDisplayValue() || '');
-  const xMatch = note.match(/(?:^|\n)X:\s*(@[A-Za-z0-9_]{1,15})(?:$|\n)/);
-  const hasBooking = status === '予約済' && !!bookingDate && !!timeText;
+
+  const status = String(
+    memberSheet.getRange(member.row, CONFIG.MEMBER_COL_STATUS).getDisplayValue() || ''
+  ).trim();
+
+  const reservation = findReservationByName_(getReservationSheet_(), normalized);
+  const hasBooking = !!reservation && !!reservation.date && !!reservation.time;
 
   return {
     ok: true,
     found: true,
     dc: ['Elemental','Gaia','Mana','Meteor'].includes(homeDc) ? homeDc : '',
-    meetingDc: ['Elemental','Gaia','Mana','Meteor'].includes(meetingDc) ? meetingDc : '',
-    eligible: status === '未招待' || status === '予約済',
+    meetingDc: hasBooking && ['Elemental','Gaia','Mana','Meteor'].includes(reservation.meetingDc)
+      ? reservation.meetingDc
+      : '',
+    eligible: status === '未招待',
     sourceStatus: status,
     canCancel: hasBooking,
-    bookingDate: hasBooking ? bookingDate : '',
-    bookingTime: hasBooking ? timeText : '',
-    bookingKey: hasBooking ? bookingDate + ' ' + timeText : '',
-    useX: !!xMatch,
-    xAccount: xMatch ? xMatch[1] : ''
+    bookingDate: hasBooking ? reservation.date : '',
+    bookingTime: hasBooking ? reservation.time : '',
+    bookingKey: hasBooking ? reservation.date + ' ' + reservation.time : '',
+    useX: hasBooking ? reservation.useX : false,
+    xAccount: hasBooking ? reservation.xAccount : ''
   };
 }
 
@@ -101,8 +113,8 @@ function book_(input) {
   lock.waitLock(10000);
 
   try {
-    const sheet = getSheet_();
-    const member = findMember_(sheet, normalizeName_(input.name));
+    const memberSheet = getMemberSheet_();
+    const member = findMember_(memberSheet, normalizeName_(input.name));
 
     if (!member) {
       return {
@@ -111,7 +123,9 @@ function book_(input) {
       };
     }
 
-    const status = String(sheet.getRange(member.row, CONFIG.COL_STATUS).getDisplayValue() || '').trim();
+    const status = String(
+      memberSheet.getRange(member.row, CONFIG.MEMBER_COL_STATUS).getDisplayValue() || ''
+    ).trim();
 
     if (status === '登録完了') {
       return { ok: false, message: 'このキャラクターはすでに登録完了しています。' };
@@ -125,15 +139,14 @@ function book_(input) {
     if (status === '招待済み') {
       return { ok: false, message: 'このキャラクターはすでに招待済みです。' };
     }
-    if (status !== '未招待' && status !== '予約済') {
+    if (status !== '未招待') {
       return { ok: false, message: 'このキャラクターは現在予約できません。' };
     }
 
-    const currentDateText = String(sheet.getRange(member.row, CONFIG.COL_DATE).getDisplayValue() || '').trim();
-    const currentTimeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
-    const currentDate = normalizeSheetDate_(currentDateText);
-    const currentKey = status === '予約済' && currentDate && currentTimeText
-      ? currentDate + ' ' + currentTimeText
+    const reservationSheet = getReservationSheet_();
+    const current = findReservationByName_(reservationSheet, normalizeName_(input.name));
+    const currentKey = current && current.date && current.time
+      ? current.date + ' ' + current.time
       : '';
 
     const requestedKey = input.date + ' ' + input.time;
@@ -147,12 +160,14 @@ function book_(input) {
       };
     }
 
-    const dateText = input.date.slice(5).replace('-', '/');
-    sheet.getRange(member.row, CONFIG.COL_DATE).setValue(dateText);
-    sheet.getRange(member.row, CONFIG.COL_TIME).setValue(input.time);
-    sheet.getRange(member.row, CONFIG.COL_STATUS).setValue('予約済');
-    sheet.getRange(member.row, CONFIG.COL_MEETING_DC).setValue(input.dc || '');
-    updateXNote_(sheet, member.row, input.useX, input.xAccount);
+    upsertReservation_(reservationSheet, current, {
+      name: member.name,
+      date: input.date,
+      time: input.time,
+      meetingDc: input.dc || '',
+      useX: !!input.useX,
+      xAccount: input.xAccount || ''
+    });
 
     return {
       ok: true,
@@ -174,8 +189,8 @@ function cancel_(name) {
   lock.waitLock(10000);
 
   try {
-    const sheet = getSheet_();
-    const member = findMember_(sheet, normalized);
+    const memberSheet = getMemberSheet_();
+    const member = findMember_(memberSheet, normalized);
 
     if (!member) {
       return {
@@ -184,21 +199,15 @@ function cancel_(name) {
       };
     }
 
-    const status = String(sheet.getRange(member.row, CONFIG.COL_STATUS).getDisplayValue() || '').trim();
-    if (status !== '予約済') {
+    const reservationSheet = getReservationSheet_();
+    const reservation = findReservationByName_(reservationSheet, normalized);
+
+    if (!reservation || !reservation.date || !reservation.time) {
       return { ok: false, message: '取り消せる予約がありません。' };
     }
 
-    const dateText = String(sheet.getRange(member.row, CONFIG.COL_DATE).getDisplayValue() || '').trim();
-    const timeText = normalizeTime_(String(sheet.getRange(member.row, CONFIG.COL_TIME).getDisplayValue() || '').trim());
-    const bookingDate = normalizeSheetDate_(dateText);
-    const oldKey = bookingDate && timeText ? bookingDate + ' ' + timeText : '';
-
-    sheet.getRange(member.row, CONFIG.COL_DATE).clearContent();
-    sheet.getRange(member.row, CONFIG.COL_TIME).clearContent();
-    sheet.getRange(member.row, CONFIG.COL_MEETING_DC).clearContent();
-    updateXNote_(sheet, member.row, false, '');
-    sheet.getRange(member.row, CONFIG.COL_STATUS).setValue('未招待');
+    const oldKey = reservation.date + ' ' + reservation.time;
+    reservationSheet.deleteRow(reservation.row);
 
     return { ok: true, oldKey: oldKey };
   } finally {
@@ -207,25 +216,23 @@ function cancel_(name) {
 }
 
 function getBookedSlots_() {
-  const sheet = getSheet_();
+  const sheet = getReservationSheet_();
   const lastRow = sheet.getLastRow();
-  if (lastRow < CONFIG.FIRST_DATA_ROW) return [];
+  if (lastRow < CONFIG.RES_FIRST_DATA_ROW) return [];
 
-  const rowCount = lastRow - CONFIG.FIRST_DATA_ROW + 1;
-  const values = sheet.getRange(CONFIG.FIRST_DATA_ROW, CONFIG.COL_DATE, rowCount, 3).getDisplayValues();
+  const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
+  const values = sheet
+    .getRange(CONFIG.RES_FIRST_DATA_ROW, CONFIG.RES_COL_DATE, rowCount, 2)
+    .getDisplayValues();
+
   const set = new Set();
 
   values.forEach(row => {
-    const dateText = String(row[0] || '').trim();
-    const timeText = normalizeTime_(String(row[1] || '').trim());
-    const status = String(row[2] || '').trim();
-    if (!dateText || !timeText) return;
-    if (!['予約済','招待済み','登録完了'].includes(status)) return;
-
-    const date = normalizeSheetDate_(dateText);
-    if (!date || date < CONFIG.START_DATE || date > CONFIG.END_DATE) return;
-
-    set.add(date + ' ' + timeText);
+    const date = normalizeSheetDate_(String(row[0] || '').trim());
+    const time = normalizeTime_(String(row[1] || '').trim());
+    if (!date || !time) return;
+    if (date < CONFIG.START_DATE || date > CONFIG.END_DATE) return;
+    set.add(date + ' ' + time);
   });
 
   return Array.from(set).sort();
@@ -233,20 +240,74 @@ function getBookedSlots_() {
 
 function findMember_(sheet, normalizedName) {
   const lastRow = sheet.getLastRow();
-  if (lastRow < CONFIG.FIRST_DATA_ROW) return null;
+  if (lastRow < CONFIG.MEMBER_FIRST_DATA_ROW) return null;
 
   const names = sheet
-    .getRange(CONFIG.FIRST_DATA_ROW, CONFIG.COL_NAME, lastRow - CONFIG.FIRST_DATA_ROW + 1, 1)
+    .getRange(
+      CONFIG.MEMBER_FIRST_DATA_ROW,
+      CONFIG.MEMBER_COL_NAME,
+      lastRow - CONFIG.MEMBER_FIRST_DATA_ROW + 1,
+      1
+    )
     .getDisplayValues();
 
   for (let i = 0; i < names.length; i++) {
     const name = String(names[i][0] || '').trim();
     if (!name) continue;
     if (normalizeName_(name) === normalizedName) {
-      return { row: CONFIG.FIRST_DATA_ROW + i, name: name };
+      return { row: CONFIG.MEMBER_FIRST_DATA_ROW + i, name: name };
     }
   }
   return null;
+}
+
+function findReservationByName_(sheet, normalizedName) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < CONFIG.RES_FIRST_DATA_ROW) return null;
+
+  const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
+  const values = sheet
+    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, 7)
+    .getDisplayValues();
+
+  for (let i = 0; i < values.length; i++) {
+    const name = String(values[i][0] || '').trim();
+    if (!name) continue;
+    if (normalizeName_(name) !== normalizedName) continue;
+
+    return {
+      row: CONFIG.RES_FIRST_DATA_ROW + i,
+      name: name,
+      date: normalizeSheetDate_(String(values[i][1] || '').trim()),
+      time: normalizeTime_(String(values[i][2] || '').trim()),
+      meetingDc: String(values[i][3] || '').trim(),
+      useX: String(values[i][4] || '').toLowerCase() === 'true',
+      xAccount: String(values[i][5] || '').trim(),
+      updatedAt: String(values[i][6] || '').trim()
+    };
+  }
+
+  return null;
+}
+
+function upsertReservation_(sheet, existing, data) {
+  const updatedAt = Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd HH:mm:ss');
+  const rowValues = [[
+    data.name,
+    data.date,
+    data.time,
+    data.meetingDc || '',
+    !!data.useX,
+    data.useX ? data.xAccount : '',
+    updatedAt
+  ]];
+
+  if (existing) {
+    sheet.getRange(existing.row, 1, 1, 7).setValues(rowValues);
+  } else {
+    const row = Math.max(sheet.getLastRow() + 1, CONFIG.RES_FIRST_DATA_ROW);
+    sheet.getRange(row, 1, 1, 7).setValues(rowValues);
+  }
 }
 
 function normalizeName_(value) {
@@ -266,27 +327,48 @@ function normalizeTime_(value) {
 function normalizeSheetDate_(value) {
   const s = String(value || '').trim();
 
-  // 10/11 / 10/11/2026 / 2026/10/11 / 2026-10-11 を許容
   let m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
-  if (m) return '2026-' + String(Number(m[1])).padStart(2,'0') + '-' + String(Number(m[2])).padStart(2,'0');
+  if (m) {
+    return '2026-' +
+      String(Number(m[1])).padStart(2,'0') + '-' +
+      String(Number(m[2])).padStart(2,'0');
+  }
 
   m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return m[3] + '-' + String(Number(m[1])).padStart(2,'0') + '-' + String(Number(m[2])).padStart(2,'0');
+  if (m) {
+    return m[3] + '-' +
+      String(Number(m[1])).padStart(2,'0') + '-' +
+      String(Number(m[2])).padStart(2,'0');
+  }
 
   m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
-  if (m) return m[1] + '-' + String(Number(m[2])).padStart(2,'0') + '-' + String(Number(m[3])).padStart(2,'0');
+  if (m) {
+    return m[1] + '-' +
+      String(Number(m[2])).padStart(2,'0') + '-' +
+      String(Number(m[3])).padStart(2,'0');
+  }
 
   return '';
 }
 
 function validateBooking_(input) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date || '')) throw new Error('日付が不正です。');
-  if (!/^\d{2}:\d{2}$/.test(input.time || '')) throw new Error('時刻が不正です。');
-  if (input.date < CONFIG.START_DATE || input.date > CONFIG.END_DATE) throw new Error('予約期間外です。');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date || '')) {
+    throw new Error('日付が不正です。');
+  }
+  if (!/^\d{2}:\d{2}$/.test(input.time || '')) {
+    throw new Error('時刻が不正です。');
+  }
+  if (input.date < CONFIG.START_DATE || input.date > CONFIG.END_DATE) {
+    throw new Error('予約期間外です。');
+  }
 
   const [h, m] = input.time.split(':').map(Number);
   const minute = h * 60 + m;
-  if (minute < CONFIG.START_MINUTE || minute >= CONFIG.END_MINUTE || m % CONFIG.SLOT_MINUTES !== 0) {
+  if (
+    minute < CONFIG.START_MINUTE ||
+    minute >= CONFIG.END_MINUTE ||
+    m % CONFIG.SLOT_MINUTES !== 0
+  ) {
     throw new Error('予約可能時間外です。');
   }
 
@@ -349,26 +431,21 @@ function validateBooking_(input) {
   }
 }
 
-function updateXNote_(sheet, row, useX, xAccount) {
-  const range = sheet.getRange(row, CONFIG.COL_NOTE);
-  const original = String(range.getDisplayValue() || '');
-  const lines = original
-    .split(/\r?\n/)
-    .filter(line => !/^X:\s*@?[A-Za-z0-9_]{1,15}\s*$/.test(line.trim()));
-
-  if (useX && xAccount) {
-    lines.push('X: ' + xAccount);
+function getMemberSheet_() {
+  const ss = SpreadsheetApp.openById(CONFIG.MEMBER_SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.MEMBER_SHEET_NAME);
+  if (!sheet) {
+    throw new Error('「' + CONFIG.MEMBER_SHEET_NAME + '」シートがありません。');
   }
-
-  const next = lines.join('\n').trim();
-  if (next) range.setValue(next);
-  else range.clearContent();
+  return sheet;
 }
 
-function getSheet_() {
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
-  if (!sheet) throw new Error('「' + CONFIG.SHEET_NAME + '」シートがありません。');
+function getReservationSheet_() {
+  const ss = SpreadsheetApp.openById(CONFIG.RESERVATION_SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.RESERVATION_SHEET_NAME);
+  if (!sheet) {
+    throw new Error('「' + CONFIG.RESERVATION_SHEET_NAME + '」シートがありません。');
+  }
   return sheet;
 }
 
