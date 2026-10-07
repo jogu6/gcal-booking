@@ -1078,8 +1078,14 @@ input:not([type="hidden"]):focus{
     }
   }
 
-  cancelNameInput.addEventListener("blur",lookupCancellation);
-  cancelNameInput.addEventListener("change",lookupCancellation);
+  cancelNameInput.addEventListener("input",()=>{
+    if(cancelMember) clearCancelLookup();
+  });
+
+  cancelNameInput.addEventListener("blur",e=>{
+    if(e.relatedTarget===cancelButton) return;
+    lookupCancellation();
+  });
 
   cancelButton.addEventListener("click",async()=>{
     if(!cancelMember) return;
