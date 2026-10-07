@@ -314,6 +314,39 @@ input:not([type="hidden"]):focus{
 @media(max-width:520px){
   .dc-choice-grid{grid-template-columns:1fr}
 }
+.cancel-card{
+  background:linear-gradient(180deg,rgba(77,52,59,.84),rgba(49,35,40,.88));
+  border-color:rgba(222,164,164,.36);
+}
+.cancel-details{
+  margin-top:14px;
+  padding:14px;
+  border:1px solid rgba(230,180,180,.25);
+  border-radius:8px;
+  background:rgba(28,20,23,.32);
+}
+.cancel-dc{
+  margin-bottom:12px;
+  font-weight:700;
+  color:#f1dddd;
+}
+.cancel-button{
+  width:100%;
+  min-height:50px;
+  border:1px solid rgba(235,173,173,.44);
+  border-radius:7px;
+  background:linear-gradient(180deg,#934f57,#743b43);
+  color:#fff4f4;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 8px rgba(0,0,0,.26);
+}
+.cancel-button.confirming{
+  background:linear-gradient(180deg,#bd5a63,#913e47);
+  border-color:rgba(255,206,206,.70);
+}
+.cancel-button:hover{filter:brightness(1.08)}
+.cancel-button:disabled{opacity:.55;cursor:default}
 .message{
   padding:13px 14px;
   border-radius:7px;
@@ -416,6 +449,12 @@ input:not([type="hidden"]):focus{
     <button id="bookingSuccessClose" type="button" class="booking-success-close">閉じる</button>
   </div>
 </div>
+<div id="cancelSuccessLayer" class="booking-success-layer hidden" aria-hidden="true">
+  <div class="booking-success-dialog" role="dialog" aria-modal="true" aria-labelledby="cancelSuccessMessage">
+    <p id="cancelSuccessMessage" class="booking-success-message">予約を取り消しました。</p>
+    <button id="cancelSuccessClose" type="button" class="booking-success-close">閉じる</button>
+  </div>
+</div>
 <main>
   <section class="card hero">
     <img class="hero-art" src="./assets/evercold.png[... ELLIPSIZATION ...]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" alt="" aria-hidden="true">
@@ -443,6 +482,10 @@ input:not([type="hidden"]):focus{
     </div>
 
     <p class="small">予約済みの枠には時間帯だけ「予約済み」と表示します。予約者のキャラクター名やDCなどは他の方には表示されません。</p>
+    <div class="notice">
+      予約日時を変更したい場合は、再予約の操作を行ってください。<br>
+      予約を取り消したい場合は、画面下にお名前を入力して、「予約を取り消す」ボタンを押してください。
+    </div>
   </section>
 
   <section class="card">
@@ -479,6 +522,20 @@ input:not([type="hidden"]):focus{
       <button id="submitButton" class="primary" type="submit">この日時で予約する</button>
       <div id="message"></div>
     </form>
+  </section>
+
+  <section id="cancelCard" class="card cancel-card">
+    <h2>予約の取り消し</h2>
+    <p class="small">予約時に入力したキャラクターフルネームを入力してください。</p>
+    <div class="row">
+      <label for="cancelCharacterName">キャラクターフルネーム</label>
+      <input id="cancelCharacterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb">
+    </div>
+    <div id="cancelDetails" class="cancel-details hidden">
+      <div id="cancelDc" class="cancel-dc"></div>
+      <button id="cancelBookingButton" type="button" class="cancel-button"></button>
+    </div>
+    <div id="cancelMessage"></div>
   </section>
 </main>
 
@@ -581,9 +638,14 @@ input:not([type="hidden"]):focus{
       }
 
       if(result.eligible === false){
-        const msg = result.sourceStatus === "登録完了"
-          ? "このキャラクターはすでに登録完了しています。"
-          : "このキャラクターは今回の予約対象ではありません。サブキャラの場合は、メインキャラでご予約ください。";
+        let msg="このキャラクターは現在予約できません。";
+        if(result.sourceStatus === "登録完了"){
+          msg="このキャラクターはすでに登録完了しています。";
+        }else if(result.sourceStatus === "招待不要"){
+          msg="このキャラクターは今回の予約対象ではありません。サブキャラの場合は、メインキャラでご予約ください。";
+        }else if(result.sourceStatus === "招待済み"){
+          msg="このキャラクターはすでに招待済みです。";
+        }
         showMessage(msg,"error");
         return false;
       }
@@ -594,7 +656,8 @@ input:not([type="hidden"]):focus{
       if(needsDc){
         dcRow.classList.remove("hidden");
         
-        if(result.dc) setDcValue(result.dc);
+        if(result.meetingDc) setDcValue(result.meetingDc);
+        else if(result.dc) setDcValue(result.dc);
       }
 
       const message=document.getElementById("message");
@@ -716,6 +779,8 @@ input:not([type="hidden"]):focus{
 
   const bookingSuccessLayer=document.getElementById("bookingSuccessLayer");
   const bookingSuccessClose=document.getElementById("bookingSuccessClose");
+  const cancelSuccessLayer=document.getElementById("cancelSuccessLayer");
+  const cancelSuccessClose=document.getElementById("cancelSuccessClose");
 
   function openBookingSuccess(){
     bookingSuccessLayer.classList.remove("hidden");
@@ -732,9 +797,28 @@ input:not([type="hidden"]):focus{
   bookingSuccessLayer.addEventListener("click",e=>{
     if(e.target===bookingSuccessLayer) closeBookingSuccess();
   });
+
+  function openCancelSuccess(){
+    cancelSuccessLayer.classList.remove("hidden");
+    cancelSuccessLayer.setAttribute("aria-hidden","false");
+    cancelSuccessClose.focus();
+  }
+
+  function closeCancelSuccess(){
+    cancelSuccessLayer.classList.add("hidden");
+    cancelSuccessLayer.setAttribute("aria-hidden","true");
+  }
+
+  cancelSuccessClose.addEventListener("click",closeCancelSuccess);
+  cancelSuccessLayer.addEventListener("click",e=>{
+    if(e.target===cancelSuccessLayer) closeCancelSuccess();
+  });
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape" && !bookingSuccessLayer.classList.contains("hidden")){
       closeBookingSuccess();
+    }
+    if(e.key==="Escape" && !cancelSuccessLayer.classList.contains("hidden")){
+      closeCancelSuccess();
     }
   });
 
@@ -785,6 +869,128 @@ input:not([type="hidden"]):focus{
     });
   });
 
+
+  const cancelNameInput=document.getElementById("cancelCharacterName");
+  const cancelDetails=document.getElementById("cancelDetails");
+  const cancelDc=document.getElementById("cancelDc");
+  const cancelButton=document.getElementById("cancelBookingButton");
+  const cancelMessage=document.getElementById("cancelMessage");
+  let cancelMember=null;
+  let cancelConfirmTimer=null;
+  let cancelConfirmUntil=0;
+
+  function showCancelMessage(text,type){
+    cancelMessage.className=`message ${type}`;
+    cancelMessage.textContent=text;
+  }
+
+  function formatCancelDate(date,time){
+    const d=parseDate(date);
+    const w=["日","月","火","水","木","金","土"][d.getDay()];
+    return `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}(${w}) ${time}`;
+  }
+
+  function resetCancelConfirm(){
+    cancelConfirmUntil=0;
+    if(cancelConfirmTimer){
+      clearTimeout(cancelConfirmTimer);
+      cancelConfirmTimer=null;
+    }
+    cancelButton.classList.remove("confirming");
+    if(cancelMember){
+      cancelButton.textContent=`${formatCancelDate(cancelMember.bookingDate,cancelMember.bookingTime)} の予約を取り消す`;
+    }
+  }
+
+  function clearCancelLookup(){
+    cancelMember=null;
+    cancelDetails.classList.add("hidden");
+    cancelMessage.className="";
+    cancelMessage.textContent="";
+    resetCancelConfirm();
+  }
+
+  async function lookupCancellation(){
+    clearCancelLookup();
+    const name=cancelNameInput.value;
+
+    if(!validName(name)){
+      showCancelMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
+      return;
+    }
+
+    try{
+      const result=await jsonp({action:"member",name:name},"予約情報を確認しています…");
+
+      if(!result.ok || !result.found){
+        showCancelMessage("名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。","error");
+        return;
+      }
+
+      if(!result.canCancel){
+        showCancelMessage("取り消せる予約がありません。","error");
+        return;
+      }
+
+      cancelMember=result;
+      const dcText=result.meetingDc || result.dc || "DC指定なし";
+      cancelDc.textContent="集合DC: "+dcText;
+      cancelDetails.classList.remove("hidden");
+      resetCancelConfirm();
+
+    }catch(_){
+      showCancelMessage("予約情報の確認に失敗しました。もう一度お試しください。","error");
+    }
+  }
+
+  cancelNameInput.addEventListener("blur",lookupCancellation);
+  cancelNameInput.addEventListener("change",lookupCancellation);
+
+  cancelButton.addEventListener("click",async()=>{
+    if(!cancelMember) return;
+
+    const now=Date.now();
+
+    if(now>cancelConfirmUntil){
+      cancelConfirmUntil=now+2000;
+      cancelButton.classList.add("confirming");
+      cancelButton.textContent="予約を取り消してよろしいですか?";
+      if(cancelConfirmTimer) clearTimeout(cancelConfirmTimer);
+      cancelConfirmTimer=setTimeout(resetCancelConfirm,2000);
+      return;
+    }
+
+    if(cancelConfirmTimer){
+      clearTimeout(cancelConfirmTimer);
+      cancelConfirmTimer=null;
+    }
+
+    cancelButton.disabled=true;
+
+    try{
+      const result=await jsonp(
+        {action:"cancel",name:cancelNameInput.value},
+        "予約を取り消しています…"
+      );
+
+      if(!result.ok) throw new Error(result.message || "予約を取り消せませんでした。");
+
+      if(result.oldKey) bookedSlots.delete(result.oldKey);
+      renderCalendar();
+      cancelNameInput.value="";
+      clearCancelLookup();
+
+      if(result.oldKey) scrollToSlot(result.oldKey);
+      setTimeout(openCancelSuccess,300);
+
+    }catch(err){
+      showCancelMessage(err.message || "予約を取り消せませんでした。","error");
+      resetCancelConfirm();
+    }finally{
+      cancelButton.disabled=false;
+    }
+  });
+
   document.getElementById("bookingForm").addEventListener("submit",async e=>{
     e.preventDefault();
     if(!selected) return showMessage("希望日時を選択してください。","error");
@@ -814,9 +1020,14 @@ input:not([type="hidden"]):focus{
         dc:dc
       },"予約を登録しています…");
 
-      if(!result.ok) throw new Error(result.message || "予約できませんでした");
+      if(!result.ok){
+        const error=new Error(result.message || "予約できませんでした");
+        error.code=result.code || "";
+        throw error;
+      }
 
-      const bookedKey=`${selected.date} ${selected.time}`;
+      const bookedKey=result.bookedKey || `${selected.date} ${selected.time}`;
+      if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
       bookedSlots.add(bookedKey);
       renderCalendar();
       selected=null;
@@ -828,7 +1039,7 @@ input:not([type="hidden"]):focus{
     }catch(err){
       const message=err.message || "予約できませんでした。";
 
-      if(message.includes("この時間は先に予約されました")){
+      if(err.code==="SLOT_TAKEN" || message.includes("この時間は先に予約されました")){
         const collidedKey=selected ? `${selected.date} ${selected.time}` : null;
         await loadSlots();
         if(collidedKey) scrollToSlot(collidedKey);
