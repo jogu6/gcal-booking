@@ -316,6 +316,46 @@ input:not([type="hidden"]):focus{
   color:#fff3cf;
   font-size:1.04em;
 }
+.auth-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  margin-top:14px;
+}
+.store-badge{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:170px;
+  height:56px;
+  overflow:hidden;
+  border-radius:7px;
+}
+.store-badge img{
+  display:block;
+  width:170px;
+  height:56px;
+  object-fit:contain;
+}
+.chrome-auth-link{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:170px;
+  min-height:56px;
+  padding:8px 12px;
+  border:1px solid rgba(193,210,227,.42);
+  border-radius:7px;
+  background:linear-gradient(180deg,#365777,#28425e);
+  color:#fff;
+  font-weight:700;
+  text-align:center;
+  text-decoration:none;
+  line-height:1.25;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 7px rgba(0,0,0,.24);
+}
+.chrome-auth-link:hover{filter:brightness(1.08)}
 .x-flow-note{
   margin:0 0 16px;
   padding:13px 15px;
@@ -556,6 +596,10 @@ input:not([type="hidden"]):focus{
 }
 #formCard{position:relative;z-index:20}
 @media(max-width:600px){
+  .auth-links{justify-content:center}
+  .store-badge,.store-badge img,.chrome-auth-link{width:160px}
+  .store-badge,.store-badge img{height:52px}
+  .chrome-auth-link{min-height:52px}
   body:before{
     background-size:100vw auto;
     background-position:center center;
@@ -605,6 +649,18 @@ input:not([type="hidden"]):focus{
       <strong>事前準備のおすすめ</strong><br>
       事前にスマホなら Google 認証システム アプリ、PCなら Authenticator Chrome拡張機能をインストールしていただくことをお勧めします。<br>
       当日でよろしければ、そちらもサポートさせていただきます。
+
+      <div class="auth-links">
+        <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=ja" target="_blank" rel="noopener noreferrer" aria-label="Google PlayでGoogle 認証システムを開く">
+          <img src="https://play.google.com/intl/en_us/badges/static/images/badges/ja_badge_web_generic.png" alt="Google Play で手に入れよう">
+        </a>
+        <a class="store-badge" href="https://apps.apple.com/jp/app/google-authenticator/id388497605" target="_blank" rel="noopener noreferrer" aria-label="App StoreでGoogle Authenticatorを開く">
+          <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ja-jp?size=250x83" alt="App Storeからダウンロード">
+        </a>
+        <a class="chrome-auth-link" href="https://chromewebstore.google.com/detail/authenticator/bhghoamapcdpbohphigoooaddinpkbai" target="_blank" rel="noopener noreferrer">
+          Authenticator Chrome拡張機能
+        </a>
+      </div>
     </div>
 
     <h2>当日の流れ</h2>
@@ -653,7 +709,7 @@ input:not([type="hidden"]):focus{
           <input id="characterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb" required>
           <button id="characterNameOk" type="button" class="name-check-button">OK</button>
         </div>
-        <div class="small">FF14のキャラクターフルネームを入力して「OK」を押してください。Enterでも確認できます。全角英数字・全角スペース、英字の大小文字は照合時に正規化します。</div>
+        <div class="small">FF14のキャラクターフルネームを入力して「OK」を押してください。</div>
       </div>
 
       <div id="dcRow" class="row hidden">
