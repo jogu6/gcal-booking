@@ -194,7 +194,7 @@
       if(result.eligible === false){
         const msg = result.sourceStatus === "登録完了"
           ? "このキャラクターはすでに登録完了しています。"
-          : "このキャラクターは招待不要になっています。";
+          : "このキャラクターは今回の予約対象ではありません。サブキャラの場合は、メインキャラでご予約ください。";
         showMessage(msg,"error");
         return false;
       }
