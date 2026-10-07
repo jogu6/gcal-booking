@@ -911,6 +911,7 @@ input:not([type="hidden"]):focus{
   }
 
   let verifiedMember = false;
+  let verifiedMemberName = "";
 
   async function verifyMemberAndApplyDc(){
     if(!selected) return false;
@@ -921,6 +922,7 @@ input:not([type="hidden"]):focus{
     const dc=document.getElementById("dc");
 
     verifiedMember=false;
+    verifiedMemberName="";
     dcRow.classList.add("hidden");
     xContactPanel.classList.add("hidden");
     xAccountRow.classList.add("hidden");
@@ -954,6 +956,7 @@ input:not([type="hidden"]):focus{
       }
 
       verifiedMember=true;
+      verifiedMemberName=normalizeName(name);
       if(result.sourceStatus==="予約済"){
         setXEnabled(!!result.useX,result.xAccount || "");
       }
@@ -981,6 +984,17 @@ input:not([type="hidden"]):focus{
 
   const characterNameInput=document.getElementById("characterName");
   const characterNameOk=document.getElementById("characterNameOk");
+
+  characterNameInput.addEventListener("input",()=>{
+    if(verifiedMemberName && normalizeName(characterNameInput.value)!==verifiedMemberName){
+      verifiedMember=false;
+      verifiedMemberName="";
+      document.getElementById("dcRow").classList.add("hidden");
+      xContactPanel.classList.add("hidden");
+      setDcValue("");
+      setXEnabled(false);
+    }
+  });
 
   characterNameOk.addEventListener("click",async()=>{
     characterNameOk.disabled=true;
@@ -1191,6 +1205,7 @@ input:not([type="hidden"]):focus{
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
     verifiedMember=false;
+    verifiedMemberName="";
     dcRow.classList.add("hidden");
     
     setDcValue("");
@@ -1378,8 +1393,9 @@ input:not([type="hidden"]):focus{
       return showMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
     }
 
-    const memberOk = await verifyMemberAndApplyDc();
-    if(!memberOk) return;
+    if(!verifiedMember || verifiedMemberName!==normalizeName(name)){
+      return showMessage("キャラクター名を入力して「OK」で確認してください。","error");
+    }
 
     const dc=document.getElementById("dc").value;
     const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
@@ -1421,6 +1437,8 @@ input:not([type="hidden"]):focus{
       bookedSlots.add(bookedKey);
       renderCalendar();
       selected=null;
+      verifiedMember=false;
+      verifiedMemberName="";
       document.getElementById("characterName").value="";
       setDcValue("");
       setXEnabled(false);
