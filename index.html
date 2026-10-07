@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>FF14 登録サポート予約</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;color:#222;background:#f4f5f7}
+    *{box-sizing:border-box}
+    body{margin:0}
+    main{width:min(980px,calc(100% - 20px));margin:16px auto 56px}
+    .card{background:#fff;border-radius:14px;padding:20px;margin:0 0 16px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+    h1{font-size:24px;margin:0 0 14px}
+    h2{font-size:19px;margin:0 0 14px}
+    p,li{line-height:1.75}
+    .notice{padding:12px 14px;background:#fff7d6;border-left:5px solid #d9aa00;border-radius:6px;margin:14px 0}
+    .small{font-size:13px;color:#666}
+    .day{margin:0 0 24px}
+    .day-title{font-weight:700;font-size:17px;margin:0 0 9px}
+    .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+    button.slot{min-height:48px;border:1px solid #bbb;border-radius:9px;background:#fff;font-size:14px;cursor:pointer}
+    button.slot:hover:not(:disabled){background:#eef5ff}
+    button.slot.booked{background:#e7e7e7;color:#777;border-color:#ddd;cursor:default}
+    button.slot.selected{background:#222;color:#fff;border-color:#222}
+    .hidden{display:none!important}
+    .row{margin-bottom:17px}
+    label{display:block;font-weight:700;margin:0 0 7px}
+    input,select{width:100%;min-height:48px;padding:10px 12px;border:1px solid #aaa;border-radius:9px;background:#fff;font-size:16px}
+    .chosen{padding:12px;background:#f0f2f4;border-radius:8px;font-weight:700}
+    .primary{width:100%;min-height:52px;border:0;border-radius:9px;background:#222;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+    .primary:disabled{background:#999;cursor:default}
+    .message{padding:13px;border-radius:8px;margin-top:14px;line-height:1.6}
+    .success{background:#e8f7ec}
+    .error{background:#fdecec}
+    .loading{padding:18px;text-align:center;color:#666}
+    @media(max-width:600px){
+      main{width:min(100% - 12px,980px);margin-top:6px}
+      .card{padding:15px;border-radius:9px}
+      h1{font-size:21px}
+      .slots{grid-template-columns:repeat(3,1fr)}
+      button.slot{font-size:13px}
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <h1>FF14 登録サポート予約</h1>
+    <p>登録作業を1対1でサポートするための予約ページです。所要時間は<strong>約30分</strong>です。</p>
+
+    <div class="notice">
+      <strong>予約期間：</strong>2026年10月11日～10月18日<br>
+      <strong>対応時間：</strong>08:00～24:00（30分単位）
+    </div>
+
+    <h2>当日の流れ</h2>
+    <ol>
+      <li>予約した時刻になりましたらFF14へログインしてください。</li>
+      <li>ゲーム内で1対1のパーティを組みます。</li>
+      <li>パーティチャットで招待URLをお送りします。</li>
+      <li>招待URLへアクセスしてください。</li>
+      <li>ワンタイムパスワードを登録します。</li>
+      <li>正常にログインできるところまでサポートします。</li>
+    </ol>
+
+    <div class="notice">
+      <strong>10月11日・12日：</strong>予約時に集合希望DCを指定してください。<br>
+      <strong>10月13日以降：</strong>集合希望DCの指定は不要です。
+    </div>
+
+    <p class="small">予約済みの枠には時間帯だけ「予約済み」と表示します。予約者のキャラクター名やDCなどは他の方には表示されません。</p>
+  </section>
+
+  <section class="card">
+    <h2>希望日時を選択</h2>
+    <div id="loading" class="loading">予約状況を読み込んでいます…</div>
+    <div id="calendar"></div>
+  </section>
+
+  <section id="formCard" class="card hidden">
+    <h2>予約内容</h2>
+    <form id="bookingForm">
+      <div class="row">
+        <label>希望日時</label>
+        <div id="selectedText" class="chosen"></div>
+      </div>
+
+      <div class="row">
+        <label for="characterName">キャラクターフルネーム</label>
+        <input id="characterName" maxlength="64" autocomplete="off" placeholder="Aaaa Bbbb" required>
+        <div class="small">FF14のキャラクターフルネームを入力してください。全角英数字・全角スペース、英字の大小文字は照合時に正規化します。</div>
+      </div>
+
+      <div id="dcRow" class="row hidden">
+        <label for="dc">集合希望DC</label>
+        <select id="dc">
+          <option value="">選択してください</option>
+          <option>Elemental</option>
+          <option>Gaia</option>
+          <option>Mana</option>
+          <option>Meteor</option>
+        </select>
+      </div>
+
+      <button id="submitButton" class="primary" type="submit">この日時で予約する</button>
+      <div id="message"></div>
+    </form>
+  </section>
+</main>
+
+<script>
+  // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
+  const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+  const START_DATE = "2026-10-11";
+  const END_DATE = "2026-10-18";
+  let bookedSlots = new Set();
+  let selected = null;
+
+  const pad2 = n => String(n).padStart(2, "0");
+
+  function parseDate(s){
+    const [y,m,d] = s.split("-").map(Number);
+    return new Date(y,m-1,d);
+  }
+
+  function dateKey(d){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+
+  function displayDate(s){
+    const d = parseDate(s);
+    const w = ["日","月","火","水","木","金","土"][d.getDay()];
+    return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;
+  }
+
+  function endTime(time){
+    if(time === "23:30") return "24:00";
+    const [h,m] = time.split(":").map(Number);
+    const total = h*60+m+30;
+    return `${pad2(Math.floor(total/60))}:${pad2(total%60)}`;
+  }
+
+  function allTimes(){
+    const a=[];
+    for(let n=8*60;n<24*60;n+=30){
+      a.push(`${pad2(Math.floor(n/60))}:${pad2(n%60)}`);
+    }
+    return a;
+  }
+
+  function normalizeName(s){
+    return s.normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
+  }
+
+  function validName(s){
+    return /^[a-z][a-z'-]* [a-z][a-z'-]*$/i.test(normalizeName(s));
+  }
+
+  function showMessage(text,type){
+    const el=document.getElementById("message");
+    el.className=`message ${type}`;
+    el.textContent=text;
+  }
+
+  function jsonp(params){
+    return new Promise((resolve,reject)=>{
+      if(API_URL.includes("PASTE_YOUR")){
+        reject(new Error("API URLが未設定です"));
+        return;
+      }
+      const cb="gcalBooking_"+Date.now()+"_"+Math.floor(Math.random()*100000);
+      const script=document.createElement("script");
+      const timer=setTimeout(()=>cleanup(new Error("通信がタイムアウトしました")),15000);
+
+      function cleanup(error,data){
+        clearTimeout(timer);
+        delete window[cb];
+        script.remove();
+        error ? reject(error) : resolve(data);
+      }
+
+      window[cb]=data=>cleanup(null,data);
+      script.onerror=()=>cleanup(new Error("予約サーバーへ接続できませんでした"));
+
+      const q=new URLSearchParams({...params,callback:cb});
+      script.src=API_URL+"?"+q.toString();
+      document.body.appendChild(script);
+    });
+  }
+
+  async function loadSlots(){
+    const loading=document.getElementById("loading");
+    try{
+      const result=await jsonp({action:"slots"});
+      if(!result.ok) throw new Error(result.message || "予約状況を取得できませんでした");
+      bookedSlots=new Set(result.booked || []);
+      renderCalendar();
+      loading.classList.add("hidden");
+    }catch(err){
+      loading.textContent="予約状況を取得できません。設定完了後に再読み込みしてください。";
+      renderCalendar();
+    }
+  }
+
+  function renderCalendar(){
+    const calendar=document.getElementById("calendar");
+    calendar.innerHTML="";
+    const start=parseDate(START_DATE);
+    const end=parseDate(END_DATE);
+    const current=new Date(start);
+
+    while(current<=end){
+      const d=dateKey(current);
+      const section=document.createElement("div");
+      section.className="day";
+
+      const title=document.createElement("div");
+      title.className="day-title";
+      title.textContent=displayDate(d);
+
+      const slots=document.createElement("div");
+      slots.className="slots";
+
+      for(const time of allTimes()){
+        const key=`${d} ${time}`;
+        const btn=document.createElement("button");
+        btn.type="button";
+        btn.className="slot";
+
+        if(bookedSlots.has(key)){
+          btn.classList.add("booked");
+          btn.disabled=true;
+          btn.textContent=`${time} 予約済み`;
+        }else{
+          btn.textContent=time;
+          btn.addEventListener("click",()=>selectSlot(d,time,btn));
+        }
+        slots.appendChild(btn);
+      }
+
+      section.append(title,slots);
+      calendar.appendChild(section);
+      current.setDate(current.getDate()+1);
+    }
+  }
+
+  function selectSlot(date,time,button){
+    document.querySelectorAll(".slot.selected").forEach(x=>x.classList.remove("selected"));
+    button.classList.add("selected");
+    selected={date,time};
+
+    document.getElementById("selectedText").textContent=
+      `${displayDate(date)} ${time} ～ ${endTime(time)}`;
+
+    const dcRow=document.getElementById("dcRow");
+    const dc=document.getElementById("dc");
+    const needsDc=date==="2026-10-11" || date==="2026-10-12";
+    dcRow.classList.toggle("hidden",!needsDc);
+    dc.required=needsDc;
+    if(!needsDc) dc.value="";
+
+    const card=document.getElementById("formCard");
+    card.classList.remove("hidden");
+    card.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
+  document.getElementById("bookingForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    if(!selected) return showMessage("希望日時を選択してください。","error");
+
+    const name=document.getElementById("characterName").value;
+    if(!validName(name)){
+      return showMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
+    }
+
+    const dc=document.getElementById("dc").value;
+    const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
+    if(needsDc && !dc) return showMessage("集合希望DCを選択してください。","error");
+
+    const submit=document.getElementById("submitButton");
+    submit.disabled=true;
+    submit.textContent="予約しています…";
+
+    try{
+      const result=await jsonp({
+        action:"book",
+        date:selected.date,
+        time:selected.time,
+        name:name,
+        dc:dc
+      });
+
+      if(!result.ok) throw new Error(result.message || "予約できませんでした");
+
+      bookedSlots.add(`${selected.date} ${selected.time}`);
+      renderCalendar();
+      showMessage("予約しました。","success");
+      selected=null;
+      document.getElementById("characterName").value="";
+      document.getElementById("dc").value="";
+      setTimeout(()=>document.getElementById("formCard").classList.add("hidden"),1200);
+    }catch(err){
+      showMessage(err.message || "予約できませんでした。","error");
+      await loadSlots();
+    }finally{
+      submit.disabled=false;
+      submit.textContent="この日時で予約する";
+    }
+  });
+
+  loadSlots();
+</script>
+</body>
+</html>
