@@ -151,6 +151,12 @@ button.slot.booked{
   color:#95a0ac;
   cursor:default;
 }
+button.slot.past{
+  background:rgba(0,0,0,.14);
+  color:#6f7a86;
+  border-color:rgba(255,255,255,.055);
+  cursor:default;
+}
 button.slot.selected{
   background:linear-gradient(var(--accent),var(--accent-2));
   color:#0d1724;
@@ -581,6 +587,33 @@ input:not([type="hidden"]):focus{
     return a;
   }
 
+  function nowInJstParts(){
+    const parts=new Intl.DateTimeFormat("en-CA",{
+      timeZone:"Asia/Tokyo",
+      year:"numeric",
+      month:"2-digit",
+      day:"2-digit",
+      hour:"2-digit",
+      minute:"2-digit",
+      hourCycle:"h23"
+    }).formatToParts(new Date());
+
+    const values={};
+    parts.forEach(p=>{ if(p.type!=="literal") values[p.type]=p.value; });
+
+    return {
+      date:`${values.year}-${values.month}-${values.day}`,
+      time:`${values.hour}:${values.minute}`
+    };
+  }
+
+  function isPastSlot(date,time){
+    const now=nowInJstParts();
+    if(date<now.date) return true;
+    if(date>now.date) return false;
+    return time<=now.time;
+  }
+
   function normalizeName(s){
     return s.normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
   }
@@ -764,6 +797,10 @@ input:not([type="hidden"]):focus{
           btn.classList.add("booked");
           btn.disabled=true;
           btn.textContent=`${time} 予約済み`;
+        }else if(isPastSlot(d,time)){
+          btn.classList.add("past");
+          btn.disabled=true;
+          btn.textContent=`${time} 受付終了`;
         }else{
           btn.textContent=time;
           btn.addEventListener("click",()=>selectSlot(d,time,btn));
@@ -1056,6 +1093,10 @@ input:not([type="hidden"]):focus{
   });
 
   loadSlots();
+
+  setInterval(()=>{
+    renderCalendar();
+  },60000);
 </script>
 </body>
 </html>
