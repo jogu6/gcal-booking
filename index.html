@@ -353,6 +353,44 @@ input:not([type="hidden"]):focus{
   animation:spin .8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+.booking-success-layer{
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(6,9,13,.48);
+  backdrop-filter:blur(3px);
+}
+.booking-success-dialog{
+  width:min(92vw,420px);
+  border:1px solid rgba(205,216,226,.34);
+  border-radius:10px;
+  background:linear-gradient(180deg,rgba(53,66,82,.98),rgba(36,46,59,.98));
+  box-shadow:0 18px 48px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.06);
+  padding:22px;
+  text-align:center;
+}
+.booking-success-message{
+  margin:0 0 18px;
+  font-size:18px;
+  line-height:1.8;
+  font-weight:700;
+  color:#f4f7fa;
+}
+.booking-success-close{
+  min-width:140px;
+  min-height:44px;
+  border:1px solid rgba(205,216,226,.28);
+  border-radius:7px;
+  background:linear-gradient(180deg,#6f9ecf 0%,#507bab 48%,#3b608d 100%);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),0 2px 7px rgba(0,0,0,.28);
+}
 #formCard{position:relative;z-index:20}
 @media(max-width:600px){
   main{width:min(100% - 12px,1040px);margin-top:8px}
@@ -370,6 +408,12 @@ input:not([type="hidden"]):focus{
   <div class="processing-box">
     <div class="processing-spinner" aria-hidden="true"></div>
     <div id="processingText">処理中です…</div>
+  </div>
+</div>
+<div id="bookingSuccessLayer" class="booking-success-layer hidden" aria-hidden="true">
+  <div class="booking-success-dialog" role="dialog" aria-modal="true" aria-labelledby="bookingSuccessMessage">
+    <p id="bookingSuccessMessage" class="booking-success-message">予約しました。<br>当日はよろしくお願いします。</p>
+    <button id="bookingSuccessClose" type="button" class="booking-success-close">閉じる</button>
   </div>
 </div>
 <main>
@@ -670,6 +714,30 @@ input:not([type="hidden"]):focus{
     }
   }
 
+  const bookingSuccessLayer=document.getElementById("bookingSuccessLayer");
+  const bookingSuccessClose=document.getElementById("bookingSuccessClose");
+
+  function openBookingSuccess(){
+    bookingSuccessLayer.classList.remove("hidden");
+    bookingSuccessLayer.setAttribute("aria-hidden","false");
+    bookingSuccessClose.focus();
+  }
+
+  function closeBookingSuccess(){
+    bookingSuccessLayer.classList.add("hidden");
+    bookingSuccessLayer.setAttribute("aria-hidden","true");
+  }
+
+  bookingSuccessClose.addEventListener("click",closeBookingSuccess);
+  bookingSuccessLayer.addEventListener("click",e=>{
+    if(e.target===bookingSuccessLayer) closeBookingSuccess();
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape" && !bookingSuccessLayer.classList.contains("hidden")){
+      closeBookingSuccess();
+    }
+  });
+
   function scrollToSlot(slotKey){
     requestAnimationFrame(()=>{
       const target=document.querySelector('.slot[data-slot-key="'+CSS.escape(slotKey)+'"]');
@@ -751,12 +819,12 @@ input:not([type="hidden"]):focus{
       const bookedKey=`${selected.date} ${selected.time}`;
       bookedSlots.add(bookedKey);
       renderCalendar();
-      showMessage("予約しました。予約した時刻を表示します。","success");
       selected=null;
       document.getElementById("characterName").value="";
       setDcValue("");
       document.getElementById("formCard").classList.add("hidden");
       scrollToSlot(bookedKey);
+      setTimeout(openBookingSuccess,350);
     }catch(err){
       const message=err.message || "予約できませんでした。";
 
