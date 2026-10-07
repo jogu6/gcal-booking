@@ -746,11 +746,35 @@ input:not([type="hidden"]):focus{
     };
   }
 
-  function isPastSlot(date,time){
-    const now=nowInJstParts();
-    if(date<now.date) return true;
-    if(date>now.date) return false;
-    return time<=now.time;
+  function isTooSoonSlot(date,time){
+    const now=new Date();
+    const parts=new Intl.DateTimeFormat("en-CA",{
+      timeZone:"Asia/Tokyo",
+      year:"numeric",
+      month:"2-digit",
+      day:"2-digit",
+      hour:"2-digit",
+      minute:"2-digit",
+      hourCycle:"h23"
+    }).formatToParts(now);
+
+    const values={};
+    parts.forEach(p=>{ if(p.type!=="literal") values[p.type]=p.value; });
+
+    const jstNowMs=Date.UTC(
+      Number(values.year),
+      Number(values.month)-1,
+      Number(values.day),
+      Number(values.hour),
+      Number(values.minute)
+    );
+    const earliestMs=jstNowMs+60*60*1000;
+
+    const [y,m,d]=date.split("-").map(Number);
+    const [hh,mm]=time.split(":").map(Number);
+    const slotMs=Date.UTC(y,m-1,d,hh,mm);
+
+    return slotMs<earliestMs;
   }
 
   function normalizeName(s){
@@ -972,7 +996,7 @@ input:not([type="hidden"]):focus{
           btn.classList.add("booked");
           btn.disabled=true;
           btn.textContent=`${time} 予約済み`;
-        }else if(isPastSlot(d,time)){
+        }else if(isTooSoonSlot(d,time)){
           btn.classList.add("past");
           btn.disabled=true;
           btn.textContent=`${time} 受付終了`;
