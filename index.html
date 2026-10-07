@@ -928,10 +928,14 @@ input:not([type="hidden"]):focus{
 
   const bookingSuccessLayer=document.getElementById("bookingSuccessLayer");
   const bookingSuccessClose=document.getElementById("bookingSuccessClose");
+  const bookingSuccessMessage=document.getElementById("bookingSuccessMessage");
   const cancelSuccessLayer=document.getElementById("cancelSuccessLayer");
   const cancelSuccessClose=document.getElementById("cancelSuccessClose");
 
-  function openBookingSuccess(){
+  function openBookingSuccess(useXContact=false){
+    bookingSuccessMessage.innerHTML=useXContact
+      ? '予約しました。<br>当日の予約時間にXのDMをご確認ください。<br>よろしくお願いします。'
+      : '予約しました。<br>当日はよろしくお願いします。';
     bookingSuccessLayer.classList.remove("hidden");
     bookingSuccessLayer.setAttribute("aria-hidden","false");
     bookingSuccessClose.focus();
@@ -1215,6 +1219,7 @@ input:not([type="hidden"]):focus{
         throw error;
       }
 
+      const bookedWithX=useX.checked;
       const bookedKey=result.bookedKey || `${selected.date} ${selected.time}`;
       if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
       bookedSlots.add(bookedKey);
@@ -1226,7 +1231,7 @@ input:not([type="hidden"]):focus{
       xContactPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
       scrollToSlot(bookedKey);
-      setTimeout(openBookingSuccess,350);
+      setTimeout(()=>openBookingSuccess(bookedWithX),350);
     }catch(err){
       const message=err.message || "予約できませんでした。";
 
