@@ -199,6 +199,8 @@ input:not([type="hidden"]):focus{
   font-weight:700;
   box-shadow:inset 0 1px 2px rgba(0,0,0,.45);
 }
+.chosen-weekday.saturday{color:#73b7ff}
+.chosen-weekday.sunday,.chosen-weekday.holiday{color:#ff8f8f}
 .primary{
   width:100%;
   min-height:52px;
@@ -1041,8 +1043,15 @@ input:not([type="hidden"]):focus{
     button.classList.add("selected");
     selected={date,time};
 
-    document.getElementById("selectedText").textContent=
-      `${displayDate(date)} ${time} ～ ${endTime(time)}`;
+    const selectedDate=parseDate(date);
+    const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
+    let selectedWeekdayClass="";
+    if(selectedDate.getDay()===6) selectedWeekdayClass=" saturday";
+    if(selectedDate.getDay()===0) selectedWeekdayClass=" sunday";
+    if(HOLIDAYS.has(date)) selectedWeekdayClass=" holiday";
+
+    document.getElementById("selectedText").innerHTML=
+      `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`;
 
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
