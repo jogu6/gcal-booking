@@ -12,7 +12,6 @@ const CONFIG = {
   START_MINUTE: 8 * 60,
   END_MINUTE: 24 * 60,
   SLOT_MINUTES: 30,
-  SLOT_CACHE_SECONDS: 15,
 
   MEMBER_FIRST_DATA_ROW: 4,
   MEMBER_COL_NAME: 2,
@@ -159,7 +158,6 @@ function book_(input) {
       useX: !!input.useX,
       xAccount: input.xAccount || ''
     });
-    clearSlotCache_();
 
     return {
       ok: true,
@@ -190,7 +188,6 @@ function cancel_(name) {
 
     const oldKey = reservation.date + ' ' + reservation.time;
     reservationSheet.deleteRow(reservation.row);
-    clearSlotCache_();
 
     return { ok: true, oldKey: oldKey };
   } finally {
@@ -199,17 +196,7 @@ function cancel_(name) {
 }
 
 function getBookedSlots_() {
-  const cache = CacheService.getScriptCache();
-  const cached = cache.get('bookedSlotsV1');
-  if (cached !== null) {
-    try {
-      return JSON.parse(cached);
-    } catch (_) {}
-  }
-
-  const slots = getBookedSlotsFromSheet_(getReservationSheet_());
-  cache.put('bookedSlotsV1', JSON.stringify(slots), CONFIG.SLOT_CACHE_SECONDS);
-  return slots;
+  return getBookedSlotsFromSheet_(getReservationSheet_());
 }
 
 function getBookedSlotsFromSheet_(sheet) {
@@ -234,9 +221,6 @@ function getBookedSlotsFromSheet_(sheet) {
   return Array.from(set).sort();
 }
 
-function clearSlotCache_() {
-  CacheService.getScriptCache().remove('bookedSlotsV1');
-}
 
 function findMember_(sheet, normalizedName) {
   const lastRow = sheet.getLastRow();
