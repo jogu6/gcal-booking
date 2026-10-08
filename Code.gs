@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.08.7',
+  APP_VERSION: '2026.10.08.8',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -10,6 +10,9 @@ const CONFIG = {
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
   END_DATE: '2026-10-18',
+  ROLLING_START_DATE: '2026-10-18',
+  NOTIFY_ALL_FROM_DATE: '2026-10-19',
+  ROLLING_DAYS: 7,
   FIRST_DAY_START_TIME: '18:00',
   START_MINUTE: 8 * 60,
   END_MINUTE: 24 * 60,
@@ -49,10 +52,14 @@ function doGet(e) {
       let reservations = readReservations_(reservationSheet);
       reservations = reconcileReservationsForMaintenance_(reservationSheet, reservations, maintenance);
 
+      const window = getBookingWindow_();
+
       result = {
         ok: true,
-        booked: getBookedSlotsFromReservations_(reservations),
+        booked: getBookedSlotsFromReservations_(reservations, window),
         maintenance: maintenance.map(publicMaintenance_),
+        windowStart: window.start,
+        windowEnd: window.end,
         version: CONFIG.APP_VERSION
       };
     } else if (action === 'member') {
@@ -173,7 +180,7 @@ function book_(input) {
       : '';
 
     const requestedKey = input.date + ' ' + input.time;
-    const booked = getBookedSlotsFromReservations_(reservations);
+    const booked = getBookedSlotsFromReservations_(reservations, getBookingWindow_());
 
     if (booked.includes(requestedKey) && requestedKey !== currentKey) {
       return {
@@ -183,14 +190,28 @@ function book_(input) {
       };
     }
 
-    upsertReservation_(reservationSheet, current, {
+    const savedReservation = {
       name: member.name,
       date: input.date,
       time: input.time,
       meetingDc: input.dc || '',
       useX: !!input.useX,
       xAccount: input.xAccount || ''
-    });
+    };
+
+    upsertReservation_(reservationSheet, current, savedReservation);
+
+    if (shouldNotifyAllReservationEvents_()) {
+      try {
+        if (current) {
+          notifyDiscordReservationChanged_(current, savedReservation);
+        } else {
+          notifyDiscordReservationCreated_(savedReservation);
+        }
+      } catch (err) {
+        console.error('Discord予約通知に失敗しました: ' + err);
+      }
+    }
 
     return {
       ok: true,
@@ -222,6 +243,14 @@ function cancel_(name) {
     const oldKey = reservation.date + ' ' + reservation.time;
     reservationSheet.deleteRow(reservation.row);
 
+    if (shouldNotifyAllReservationEvents_()) {
+      try {
+        notifyDiscordReservationCancelled_(reservation);
+      } catch (err) {
+        console.error('Discord予約取消通知に失敗しました: ' + err);
+      }
+    }
+
     return { ok: true, oldKey: oldKey };
   } finally {
     lock.releaseLock();
@@ -229,7 +258,10 @@ function cancel_(name) {
 }
 
 function getBookedSlots_() {
-  return getBookedSlotsFromReservations_(readReservations_(getReservationSheet_()));
+  return getBookedSlotsFromReservations_(
+    readReservations_(getReservationSheet_()),
+    getBookingWindow_()
+  );
 }
 
 function readReservations_(sheet) {
@@ -270,16 +302,44 @@ function findReservationInRows_(reservations, normalizedName) {
   return null;
 }
 
-function getBookedSlotsFromReservations_(reservations) {
+function getBookedSlotsFromReservations_(reservations, window) {
   const set = new Set();
+  const activeWindow = window || getBookingWindow_();
 
   reservations.forEach(reservation => {
     if (!reservation.date || !reservation.time) return;
-    if (reservation.date < CONFIG.START_DATE || reservation.date > CONFIG.END_DATE) return;
+    if (reservation.date < activeWindow.start || reservation.date > activeWindow.end) return;
     set.add(reservation.date + ' ' + reservation.time);
   });
 
   return Array.from(set).sort();
+}
+
+function getBookingWindow_() {
+  const today = Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+
+  if (today < CONFIG.ROLLING_START_DATE) {
+    return {
+      start: CONFIG.START_DATE,
+      end: CONFIG.END_DATE
+    };
+  }
+
+  return {
+    start: today,
+    end: addDaysToDateKey_(today, CONFIG.ROLLING_DAYS - 1)
+  };
+}
+
+function addDaysToDateKey_(dateKey, days) {
+  const parts = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days));
+  return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd');
+}
+
+function shouldNotifyAllReservationEvents_() {
+  const today = Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+  return today >= CONFIG.NOTIFY_ALL_FROM_DATE;
 }
 
 function findMember_(sheet, normalizedName) {
@@ -405,6 +465,113 @@ function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) 
   }
 
   return keep;
+}
+
+function sendDiscordReservationEmbed_(embed) {
+  const webhookUrl = PropertiesService
+    .getScriptProperties()
+    .getProperty('DISCORD_WEBHOOK_URL');
+
+  if (!webhookUrl) return;
+
+  const response = UrlFetchApp.fetch(webhookUrl, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ embeds: [embed] }),
+    muteHttpExceptions: true
+  });
+
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) {
+    throw new Error(
+      'Discord Webhook通知に失敗しました。HTTP ' +
+      status +
+      ': ' +
+      response.getContentText()
+    );
+  }
+}
+
+function reservationFields_(reservation) {
+  return [
+    {
+      name: 'キャラクター名',
+      value: reservation.name || '不明',
+      inline: false
+    },
+    {
+      name: '予約日時',
+      value: (reservation.date || '') + ' ' + (reservation.time || ''),
+      inline: false
+    },
+    {
+      name: '集合DC',
+      value: reservation.meetingDc || '指定なし',
+      inline: false
+    },
+    {
+      name: 'X利用',
+      value: reservation.useX ? 'あり' : 'なし',
+      inline: false
+    },
+    {
+      name: 'Xアカウント名',
+      value: reservation.useX && reservation.xAccount ? reservation.xAccount : 'なし',
+      inline: false
+    }
+  ];
+}
+
+function notifyDiscordReservationCreated_(reservation) {
+  sendDiscordReservationEmbed_({
+    title: '新規予約',
+    fields: reservationFields_(reservation)
+  });
+}
+
+function notifyDiscordReservationChanged_(before, after) {
+  sendDiscordReservationEmbed_({
+    title: '予約変更',
+    fields: [
+      {
+        name: 'キャラクター名',
+        value: after.name || before.name || '不明',
+        inline: false
+      },
+      {
+        name: '変更前',
+        value: (before.date || '') + ' ' + (before.time || ''),
+        inline: false
+      },
+      {
+        name: '変更後',
+        value: (after.date || '') + ' ' + (after.time || ''),
+        inline: false
+      },
+      {
+        name: '集合DC',
+        value: after.meetingDc || '指定なし',
+        inline: false
+      },
+      {
+        name: 'X利用',
+        value: after.useX ? 'あり' : 'なし',
+        inline: false
+      },
+      {
+        name: 'Xアカウント名',
+        value: after.useX && after.xAccount ? after.xAccount : 'なし',
+        inline: false
+      }
+    ]
+  });
+}
+
+function notifyDiscordReservationCancelled_(reservation) {
+  sendDiscordReservationEmbed_({
+    title: '予約取り消し',
+    fields: reservationFields_(reservation)
+  });
 }
 
 function notifyDiscordAutoCancelled_(reservations, maintenance) {
@@ -595,7 +762,8 @@ function validateBooking_(input) {
   if (!/^\d{2}:\d{2}$/.test(input.time || '')) {
     throw new Error('時刻が不正です。');
   }
-  if (input.date < CONFIG.START_DATE || input.date > CONFIG.END_DATE) {
+  const bookingWindow = getBookingWindow_();
+  if (input.date < bookingWindow.start || input.date > bookingWindow.end) {
     throw new Error('予約期間外です。');
   }
 
