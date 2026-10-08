@@ -911,7 +911,7 @@ button.slot.maintenance:hover{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbxlfVVpOYcYaXTC7RfWELtbKr1uOvbQRymvoZwZrO5EaiyHPy6jBDyDbC_R89t66tZB/exec";
-  const EXPECTED_API_VERSION = "2026.10.08.8";
+  const EXPECTED_API_VERSION = "2026.10.09.1";
 
   let START_DATE = "2026-10-11";
 
@@ -947,7 +947,9 @@ button.slot.maintenance:hover{
   function findEarliestSelectableSlot(){
     const start=parseDate(START_DATE);
     const end=parseDate(END_DATE);
-    const current=new Date(start);
+    const todayJst=nowInJstParts().date;
+    const visibleStart=todayJst>START_DATE ? parseDate(todayJst) : start;
+    const current=new Date(visibleStart);
 
     while(current<=end){
       const date=dateKey(current);
