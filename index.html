@@ -911,7 +911,7 @@ button.slot.maintenance:hover{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbxlfVVpOYcYaXTC7RfWELtbKr1uOvbQRymvoZwZrO5EaiyHPy6jBDyDbC_R89t66tZB/exec";
-  const EXPECTED_API_VERSION = "2026.10.08.5";
+  const EXPECTED_API_VERSION = "2026.10.08.6";
 
   const START_DATE = "2026-10-11";
 
@@ -1174,12 +1174,17 @@ button.slot.maintenance:hover{
       xContactPanel.classList.remove("hidden");
       xAccountRow.classList.toggle("hidden",!useX.checked);
 
-      const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
+      const needsDc=
+        !selectedRequiresX &&
+        (selected.date==="2026-10-11" || selected.date==="2026-10-12");
       if(needsDc){
         dcRow.classList.remove("hidden");
-        
+
         if(result.meetingDc) setDcValue(result.meetingDc);
         else if(result.dc) setDcValue(result.dc);
+      }else{
+        dcRow.classList.add("hidden");
+        setDcValue("");
       }
 
       const message=document.getElementById("message");
@@ -1635,7 +1640,9 @@ button.slot.maintenance:hover{
     }
 
     const dc=document.getElementById("dc").value;
-    const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
+    const needsDc=
+      !selectedRequiresX &&
+      (selected.date==="2026-10-11" || selected.date==="2026-10-12");
     if(needsDc && !dc) return showMessage("集合希望DCを選択してください。","error");
 
     if(selectedRequiresX && !useX.checked){
