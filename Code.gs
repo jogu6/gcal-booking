@@ -294,7 +294,7 @@ function upsertReservation_(sheet, existing, data) {
     data.date,
     data.time,
     data.meetingDc || '',
-    !!data.useX,
+    data.useX ? true : '',
     data.useX ? data.xAccount : '',
     updatedAt
   ]];
