@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.08.4',
+  APP_VERSION: '2026.10.08.5',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -158,11 +158,11 @@ function book_(input) {
     const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
     const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
 
-    if (isSlotInMaintenance_(input.date, input.time, maintenance)) {
+    if (isSlotInMaintenance_(input.date, input.time, maintenance) && !input.useX) {
       return {
         ok: false,
-        code: 'MAINTENANCE',
-        message: '選択した時間帯はメンテナンス予定のため予約できません。別の時間を選んでください。'
+        code: 'MAINTENANCE_X_REQUIRED',
+        message: 'メンテナンス時間帯は、Xでのやりとりを希望する予約のみ受け付けています。'
       };
     }
 
