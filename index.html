@@ -770,7 +770,7 @@ button.slot.maintenance:hover{
     <p>登録作業を1対1でサポートするための予約ページです。</p>
 
     <div class="notice">
-      <strong>予約期間：</strong><span id="bookingPeriodText">2026年10月11日 18:00～10月18日</span><br>
+      <strong>予約可能日時：</strong><span id="bookingPeriodText">計算中…</span><br>
       <span class="small">期間外をご希望の方は、リーダーもしくは私 Og Og までご連絡ください。</span><br>
       <strong>対応時間：</strong>08:00～24:00（30分単位）
     </div>
@@ -944,16 +944,41 @@ button.slot.maintenance:hover{
     return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
   }
 
+  function findEarliestSelectableSlot(){
+    const start=parseDate(START_DATE);
+    const end=parseDate(END_DATE);
+    const current=new Date(start);
+
+    while(current<=end){
+      const date=dateKey(current);
+
+      for(const time of allTimes()){
+        if(isBeforeReceptionStart(date,time)) continue;
+        if(isTooSoonSlot(date,time)) continue;
+        return {date,time};
+      }
+
+      current.setDate(current.getDate()+1);
+    }
+
+    return null;
+  }
+
   function updateBookingPeriodText(){
     const el=document.getElementById("bookingPeriodText");
     if(!el) return;
 
-    if(START_DATE==="2026-10-11"){
-      el.textContent="2026年10月11日 18:00～10月18日";
+    const earliest=findEarliestSelectableSlot();
+    if(!earliest){
+      el.textContent="現在予約できる時間帯はありません";
       return;
     }
 
-    el.textContent=displayPeriodDate(START_DATE)+"～"+displayPeriodDate(END_DATE);
+    const latest={date:END_DATE,time:"23:30"};
+    el.textContent=
+      displayPeriodDate(earliest.date)+" "+earliest.time+
+      " ～ "+
+      displayPeriodDate(latest.date)+" "+latest.time;
   }
 
   function displayDate(s){
@@ -1739,6 +1764,7 @@ button.slot.maintenance:hover{
   loadSlots();
 
   setInterval(()=>{
+    updateBookingPeriodText();
     renderCalendar();
   },60000);
 </script>
