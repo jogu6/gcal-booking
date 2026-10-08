@@ -1,4 +1,5 @@
 const CONFIG = {
+  APP_VERSION: '2026.10.08.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -37,8 +38,10 @@ function doGet(e) {
   try {
     const action = e.parameter.action || 'slots';
 
-    if (action === 'slots') {
-      result = { ok: true, booked: getBookedSlots_() };
+    if (action === 'version') {
+      result = { ok: true, version: CONFIG.APP_VERSION };
+    } else if (action === 'slots') {
+      result = { ok: true, booked: getBookedSlots_(), version: CONFIG.APP_VERSION };
     } else if (action === 'member') {
       result = member_(e.parameter.name);
     } else if (action === 'book') {
@@ -57,6 +60,10 @@ function doGet(e) {
     }
   } catch (err) {
     result = { ok: false, message: err && err.message ? err.message : String(err) };
+  }
+
+  if (result && typeof result === 'object' && !('version' in result)) {
+    result.version = CONFIG.APP_VERSION;
   }
 
   const json = JSON.stringify(result);
