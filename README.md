@@ -240,11 +240,13 @@ Apps Script の「プロジェクトの設定」→「スクリプト プロパ�
 
 通常の手動取消ではDiscord通知しません。
 
+初回設定時やWebhook疎通確認時は、Apps Script エディタから `testDiscordWebhook` を手動実行してください。これにより外部通信権限の承認とWebhook URLの有効性を確認できます。失敗した場合はHTTPステータスとDiscordの応答内容をエラーとして表示します。
+
 ## Apps Script API
 
 現在の API バージョン:
 
-`2026.10.08.6`
+`2026.10.08.7`
 
 主なアクション:
 
