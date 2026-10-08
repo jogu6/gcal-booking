@@ -781,6 +781,7 @@ input:not([type="hidden"]):focus{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbxlfVVpOYcYaXTC7RfWELtbKr1uOvbQRymvoZwZrO5EaiyHPy6jBDyDbC_R89t66tZB/exec";
+  const EXPECTED_API_VERSION = "2026.10.08.1";
 
   const START_DATE = "2026-10-11";
   const END_DATE = "2026-10-18";
@@ -1052,7 +1053,15 @@ input:not([type="hidden"]):focus{
         error ? reject(error) : resolve(data);
       }
 
-      window[cb]=data=>cleanup(null,data);
+      window[cb]=data=>{
+        if(!data || data.version!==EXPECTED_API_VERSION){
+          cleanup(new Error(
+            "予約システムのバージョンが一致しません。管理者がApps Scriptを最新版へデプロイする必要があります。"
+          ));
+          return;
+        }
+        cleanup(null,data);
+      };
       script.onerror=()=>cleanup(new Error("予約サーバーへ接続できませんでした"));
 
       const q=new URLSearchParams({...params,callback:cb});
@@ -1070,8 +1079,11 @@ input:not([type="hidden"]):focus{
       renderCalendar();
       loading.classList.add("hidden");
     }catch(err){
-      loading.textContent="予約状況を取得できません。設定完了後に再読み込みしてください。";
-      renderCalendar();
+      bookedSlots=new Set();
+      document.getElementById("calendar").innerHTML="";
+      loading.classList.remove("hidden");
+      loading.textContent=err.message || "予約状況を取得できません。再読み込みしてください。";
+      loading.classList.add("error");
     }
   }
 
