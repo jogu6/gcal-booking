@@ -1300,7 +1300,11 @@ button.slot.maintenance:hover{
       }
       const cb="gcalBooking_"+Date.now()+"_"+Math.floor(Math.random()*100000);
       const script=document.createElement("script");
-      const timer=setTimeout(()=>cleanup(new Error("通信がタイムアウトしました")),15000);
+      const timer=setTimeout(()=>{
+        const error=new Error("通信がタイムアウトしました");
+        error.code="TIMEOUT";
+        cleanup(error);
+      },15000);
 
       function cleanup(error,data){
         clearTimeout(timer);
@@ -1327,20 +1331,31 @@ button.slot.maintenance:hover{
     });
   }
 
-  async function loadSlots(){
+  async function loadSlots(retryCount=0){
     const loading=document.getElementById("loading");
     try{
       const result=await jsonp({action:"slots"},"予約状況を読み込んでいます…");
       if(!result.ok) throw new Error(result.message || "予約状況を取得できませんでした");
+
       bookedSlots=new Set(result.booked || []);
       maintenancePeriods=Array.isArray(result.maintenance) ? result.maintenance : [];
       if(result.windowStart) START_DATE=result.windowStart;
       if(result.windowEnd) END_DATE=result.windowEnd;
+
       updateBookingPeriodText();
       renderMaintenanceSchedule();
       renderCalendar();
+
       loading.classList.add("hidden");
+      loading.classList.remove("error");
     }catch(err){
+      if(err && err.code==="TIMEOUT" && retryCount<3){
+        loading.classList.remove("hidden","error");
+        loading.textContent=`通信がタイムアウトしました。自動再読み込みしています…（${retryCount+1}/3）`;
+        await new Promise(resolve=>setTimeout(resolve,800));
+        return loadSlots(retryCount+1);
+      }
+
       bookedSlots=new Set();
       maintenancePeriods=[];
       renderMaintenanceSchedule();
