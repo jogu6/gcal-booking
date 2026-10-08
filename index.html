@@ -770,7 +770,7 @@ button.slot.maintenance:hover{
     <p>登録作業を1対1でサポートするための予約ページです。</p>
 
     <div class="notice">
-      <strong>予約期間：</strong>2026年10月11日 18:00～10月18日<br>
+      <strong>予約期間：</strong><span id="bookingPeriodText">2026年10月11日 18:00～10月18日</span><br>
       <span class="small">期間外をご希望の方は、リーダーもしくは私 Og Og までご連絡ください。</span><br>
       <strong>対応時間：</strong>08:00～24:00（30分単位）
     </div>
@@ -911,9 +911,9 @@ button.slot.maintenance:hover{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbxlfVVpOYcYaXTC7RfWELtbKr1uOvbQRymvoZwZrO5EaiyHPy6jBDyDbC_R89t66tZB/exec";
-  const EXPECTED_API_VERSION = "2026.10.08.7";
+  const EXPECTED_API_VERSION = "2026.10.08.8";
 
-  const START_DATE = "2026-10-11";
+  let START_DATE = "2026-10-11";
 
   const scrollToCancel=document.getElementById("scrollToCancel");
   scrollToCancel.addEventListener("click",()=>{
@@ -921,7 +921,7 @@ button.slot.maintenance:hover{
     target.scrollIntoView({behavior:"smooth",block:"start"});
     setTimeout(()=>document.getElementById("cancelCharacterName").focus(),350);
   });
-  const END_DATE = "2026-10-18";
+  let END_DATE = "2026-10-18";
   const HOLIDAYS = new Set(["2026-10-12"]);
   let bookedSlots = new Set();
   let maintenancePeriods = [];
@@ -937,6 +937,23 @@ button.slot.maintenance:hover{
 
   function dateKey(d){
     return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+
+  function displayPeriodDate(s){
+    const d=parseDate(s);
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+  }
+
+  function updateBookingPeriodText(){
+    const el=document.getElementById("bookingPeriodText");
+    if(!el) return;
+
+    if(START_DATE==="2026-10-11"){
+      el.textContent="2026年10月11日 18:00～10月18日";
+      return;
+    }
+
+    el.textContent=displayPeriodDate(START_DATE)+"～"+displayPeriodDate(END_DATE);
   }
 
   function displayDate(s){
@@ -1292,6 +1309,9 @@ button.slot.maintenance:hover{
       if(!result.ok) throw new Error(result.message || "予約状況を取得できませんでした");
       bookedSlots=new Set(result.booked || []);
       maintenancePeriods=Array.isArray(result.maintenance) ? result.maintenance : [];
+      if(result.windowStart) START_DATE=result.windowStart;
+      if(result.windowEnd) END_DATE=result.windowEnd;
+      updateBookingPeriodText();
       renderMaintenanceSchedule();
       renderCalendar();
       loading.classList.add("hidden");
