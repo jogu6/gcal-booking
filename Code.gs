@@ -414,45 +414,61 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
 
   if (!webhookUrl) return;
 
-  const lines = [
-    '【メンテナンスによる予約の自動キャンセル】',
-    ''
-  ];
-
-  reservations.forEach((reservation, index) => {
+  const embeds = reservations.map(reservation => {
     const matchingPeriods = maintenance.filter(period =>
       isSlotInMaintenance_(reservation.date, reservation.time, [period])
     );
+    const period = matchingPeriods.length ? matchingPeriods[0] : null;
 
-    lines.push(
-      (index + 1) + '. ' + reservation.name,
-      '予約日時: ' + reservation.date + ' ' + reservation.time,
-      '集合DC: ' + (reservation.meetingDc || '指定なし'),
-      'X利用: なし'
-    );
+    const fields = [
+      {
+        name: 'キャラクター名',
+        value: reservation.name || '不明',
+        inline: false
+      },
+      {
+        name: '予約日時',
+        value: (reservation.date || '') + ' ' + (reservation.time || ''),
+        inline: false
+      },
+      {
+        name: '集合DC',
+        value: reservation.meetingDc || '指定なし',
+        inline: false
+      },
+      {
+        name: 'X利用',
+        value: 'なし',
+        inline: false
+      }
+    ];
 
-    if (matchingPeriods.length) {
-      const period = matchingPeriods[0];
-      lines.push(
-        'メンテナンス: ' +
-          period.start.replace('T',' ') +
-          ' ～ ' +
-          period.end.replace('T',' ')
-      );
+    if (period) {
+      fields.push({
+        name: 'メンテナンス時間',
+        value: period.start.replace('T',' ') + ' ～ ' + period.end.replace('T',' '),
+        inline: false
+      });
 
       if (period.message) {
-        lines.push('案内: ' + period.message);
+        fields.push({
+          name: '案内',
+          value: period.message,
+          inline: false
+        });
       }
     }
 
-    lines.push('');
+    return {
+      title: 'メンテナンスによる予約の自動キャンセル',
+      fields: fields,
+      footer: {
+        text: '予約管理シートから自動削除済み'
+      }
+    };
   });
 
-  lines.push('上記予約は予約管理シートから自動削除されました。');
-
-  const payload = {
-    content: lines.join('\n')
-  };
+  const payload = { embeds: embeds };
 
   try {
     UrlFetchApp.fetch(webhookUrl, {
