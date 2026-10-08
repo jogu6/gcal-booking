@@ -370,6 +370,47 @@ input:not([type="hidden"]):focus{
   background:linear-gradient(90deg,rgba(199,170,112,.20),rgba(199,170,112,.07));
   color:#fff5dc;
 }
+.maintenance-policy-note{
+  margin:18px 0 20px;
+  padding:14px 16px;
+  border:1px solid rgba(199,151,112,.52);
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(66,48,38,.74),rgba(45,34,29,.80));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 4px 14px rgba(0,0,0,.16);
+  color:#f0dfd2;
+  line-height:1.75;
+}
+.maintenance-policy-note>strong{
+  color:#ffe3ca;
+}
+.maintenance-schedule{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(221,174,137,.24);
+}
+.maintenance-schedule-title{
+  margin-bottom:7px;
+  color:#ffe5ca;
+  font-weight:700;
+}
+.maintenance-period{
+  padding:5px 0;
+}
+.maintenance-period-time{
+  font-weight:700;
+  color:#f3cfad;
+}
+.maintenance-period-message{
+  margin-left:8px;
+  color:#d9c6b8;
+}
+button.slot.maintenance{
+  background:linear-gradient(180deg,rgba(101,75,52,.82),rgba(69,51,37,.88));
+  color:#f2d7bb;
+  border-color:rgba(207,158,112,.42);
+  cursor:default;
+  font-weight:700;
+}
 .prep-note{
   margin:18px 0 20px;
   padding:14px 16px;
@@ -730,6 +771,14 @@ input:not([type="hidden"]):focus{
       <strong>対応時間：</strong>08:00～24:00（30分単位）
     </div>
 
+    <div class="maintenance-policy-note">
+      <strong>臨時メンテナンスについて</strong><br>
+      期間中、FF14の臨時メンテナンス等が入る場合があります。<br>
+      メンテナンス時間帯と重なる予約のうち、Xでのやりとりを希望していない予約は自動的にキャンセルされます。あらかじめご了承ください。<br>
+      Xでのやりとりを希望している予約は、自動キャンセルの対象外です。
+      <div id="maintenanceSchedule" class="maintenance-schedule hidden"></div>
+    </div>
+
     <div class="prep-note">
       <strong>事前準備のおすすめ</strong><br>
       事前にスマホなら Google 認証システム(Authenticator) アプリ、PCなら Authenticator Chrome拡張機能をインストールしていただくことをお勧めします。<br>
@@ -858,7 +907,7 @@ input:not([type="hidden"]):focus{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbxlfVVpOYcYaXTC7RfWELtbKr1uOvbQRymvoZwZrO5EaiyHPy6jBDyDbC_R89t66tZB/exec";
-  const EXPECTED_API_VERSION = "2026.10.08.1";
+  const EXPECTED_API_VERSION = "2026.10.08.2";
 
   const START_DATE = "2026-10-11";
 
@@ -871,6 +920,7 @@ input:not([type="hidden"]):focus{
   const END_DATE = "2026-10-18";
   const HOLIDAYS = new Set(["2026-10-12"]);
   let bookedSlots = new Set();
+  let maintenancePeriods = [];
   let selected = null;
 
   const pad2 = n => String(n).padStart(2, "0");
@@ -960,6 +1010,74 @@ input:not([type="hidden"]):focus{
     return slotMs<earliestMs;
   }
 
+  function localStampMs(value){
+    const m=String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+    if(!m) return NaN;
+    return Date.UTC(
+      Number(m[1]),
+      Number(m[2])-1,
+      Number(m[3]),
+      Number(m[4]),
+      Number(m[5])
+    );
+  }
+
+  function slotMs(date,time){
+    const [y,m,d]=date.split("-").map(Number);
+    const [hh,mm]=time.split(":").map(Number);
+    return Date.UTC(y,m-1,d,hh,mm);
+  }
+
+  function isMaintenanceSlot(date,time){
+    const start=slotMs(date,time);
+    const end=start+30*60*1000;
+    return maintenancePeriods.some(period=>{
+      const pStart=localStampMs(period.start);
+      const pEnd=localStampMs(period.end);
+      return Number.isFinite(pStart) && Number.isFinite(pEnd) && start<pEnd && end>pStart;
+    });
+  }
+
+  function displayMaintenanceStamp(value){
+    const ms=localStampMs(value);
+    if(!Number.isFinite(ms)) return value;
+    const d=new Date(ms);
+    const w=["日","月","火","水","木","金","土"][d.getUTCDay()];
+    return `${d.getUTCMonth()+1}/${d.getUTCDate()}(${w}) ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+  }
+
+  function renderMaintenanceSchedule(){
+    const el=document.getElementById("maintenanceSchedule");
+    if(!maintenancePeriods.length){
+      el.classList.add("hidden");
+      el.innerHTML="";
+      return;
+    }
+
+    el.classList.remove("hidden");
+    el.innerHTML='<div class="maintenance-schedule-title">現在のメンテナンス予定</div>';
+
+    maintenancePeriods.forEach(period=>{
+      const row=document.createElement("div");
+      row.className="maintenance-period";
+
+      const time=document.createElement("span");
+      time.className="maintenance-period-time";
+      time.textContent=displayMaintenanceStamp(period.start)+" ～ "+displayMaintenanceStamp(period.end);
+
+      row.appendChild(time);
+
+      if(period.message){
+        const msg=document.createElement("span");
+        msg.className="maintenance-period-message";
+        msg.textContent=period.message;
+        row.appendChild(msg);
+      }
+
+      el.appendChild(row);
+    });
+  }
+
   function normalizeName(s){
     return s.normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
   }
@@ -1042,7 +1160,7 @@ input:not([type="hidden"]):focus{
 
       verifiedMember=true;
       verifiedMemberName=normalizeName(name);
-      if(result.sourceStatus==="予約済"){
+      if(result.canCancel){
         setXEnabled(!!result.useX,result.xAccount || "");
       }
       xContactPanel.classList.remove("hidden");
@@ -1160,10 +1278,14 @@ input:not([type="hidden"]):focus{
       const result=await jsonp({action:"slots"},"予約状況を読み込んでいます…");
       if(!result.ok) throw new Error(result.message || "予約状況を取得できませんでした");
       bookedSlots=new Set(result.booked || []);
+      maintenancePeriods=Array.isArray(result.maintenance) ? result.maintenance : [];
+      renderMaintenanceSchedule();
       renderCalendar();
       loading.classList.add("hidden");
     }catch(err){
       bookedSlots=new Set();
+      maintenancePeriods=[];
+      renderMaintenanceSchedule();
       document.getElementById("calendar").innerHTML="";
       loading.classList.remove("hidden");
       loading.textContent=err.message || "予約状況を取得できません。再読み込みしてください。";
@@ -1204,6 +1326,10 @@ input:not([type="hidden"]):focus{
           btn.classList.add("booked");
           btn.disabled=true;
           btn.textContent=`${time} 予約済み`;
+        }else if(isMaintenanceSlot(d,time)){
+          btn.classList.add("maintenance");
+          btn.disabled=true;
+          btn.textContent=`${time} メンテナンス`;
         }else if(isBeforeReceptionStart(d,time)){
           btn.classList.add("past");
           btn.disabled=true;
@@ -1552,6 +1678,13 @@ input:not([type="hidden"]):focus{
         selected=null;
         document.getElementById("formCard").classList.add("hidden");
         showGlobalNotice("その時刻は他の方に先に予約されました。別の時刻を選択してください。","error");
+      }else if(err.code==="MAINTENANCE"){
+        const maintenanceKey=selected ? `${selected.date} ${selected.time}` : null;
+        await loadSlots();
+        if(maintenanceKey) scrollToSlot(maintenanceKey);
+        selected=null;
+        document.getElementById("formCard").classList.add("hidden");
+        showGlobalNotice("その時間帯はメンテナンス予定になりました。別の時刻を選択してください。","error");
       }else{
         showMessage(message,"error");
       }
