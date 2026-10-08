@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.08.5',
+  APP_VERSION: '2026.10.08.6',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -602,8 +602,14 @@ function validateBooking_(input) {
     throw new Error('キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。');
   }
 
-  const needsDc = input.date === '2026-10-11' || input.date === '2026-10-12';
   const allowedDc = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
+  const privateSs = getReservationSpreadsheet_();
+  const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
+  const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
+  const maintenanceSlot = isSlotInMaintenance_(input.date, input.time, maintenance);
+  const needsDc =
+    !maintenanceSlot &&
+    (input.date === '2026-10-11' || input.date === '2026-10-12');
 
   if (needsDc && !allowedDc.includes(input.dc)) {
     throw new Error('集合希望DCを選択してください。');
