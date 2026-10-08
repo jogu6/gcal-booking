@@ -1,10 +1,11 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.08.1',
+  APP_VERSION: '2026.10.08.2',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
   RESERVATION_SPREADSHEET_ID: '12mdeeY6y6xWv71CQdhxQCRxSI19oRPpTMkhlIIFX1vo',
   RESERVATION_SHEET_NAME: '予約管理',
+  MAINTENANCE_SHEET_NAME: 'メンテナンス',
 
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
@@ -41,7 +42,19 @@ function doGet(e) {
     if (action === 'version') {
       result = { ok: true, version: CONFIG.APP_VERSION };
     } else if (action === 'slots') {
-      result = { ok: true, booked: getBookedSlots_(), version: CONFIG.APP_VERSION };
+      const privateSs = getReservationSpreadsheet_();
+      const reservationSheet = getSheetFrom_(privateSs, CONFIG.RESERVATION_SHEET_NAME);
+      const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
+      const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
+      let reservations = readReservations_(reservationSheet);
+      reservations = reconcileReservationsForMaintenance_(reservationSheet, reservations, maintenance);
+
+      result = {
+        ok: true,
+        booked: getBookedSlotsFromReservations_(reservations),
+        maintenance: maintenance.map(publicMaintenance_),
+        version: CONFIG.APP_VERSION
+      };
     } else if (action === 'member') {
       result = member_(e.parameter.name);
     } else if (action === 'book') {
@@ -84,7 +97,7 @@ function member_(name) {
 
   const homeDc = member.home.includes('/') ? member.home.split('/')[0] : member.home;
 
-  const reservation = findReservationByName_(getReservationSheet_(), normalized);
+  const reservation = findReservationInRows_(readReservations_(getReservationSheet_()), normalized);
   const hasBooking = !!reservation && !!reservation.date && !!reservation.time;
 
   return {
@@ -140,14 +153,27 @@ function book_(input) {
       return { ok: false, message: 'このキャラクターは現在予約できません。' };
     }
 
-    const reservationSheet = getReservationSheet_();
-    const current = findReservationByName_(reservationSheet, normalizeName_(input.name));
+    const privateSs = getReservationSpreadsheet_();
+    const reservationSheet = getSheetFrom_(privateSs, CONFIG.RESERVATION_SHEET_NAME);
+    const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
+    const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
+
+    if (isSlotInMaintenance_(input.date, input.time, maintenance)) {
+      return {
+        ok: false,
+        code: 'MAINTENANCE',
+        message: '選択した時間帯はメンテナンス予定のため予約できません。別の時間を選んでください。'
+      };
+    }
+
+    const reservations = readReservations_(reservationSheet);
+    const current = findReservationInRows_(reservations, normalizeName_(input.name));
     const currentKey = current && current.date && current.time
       ? current.date + ' ' + current.time
       : '';
 
     const requestedKey = input.date + ' ' + input.time;
-    const booked = getBookedSlotsFromSheet_(reservationSheet);
+    const booked = getBookedSlotsFromReservations_(reservations);
 
     if (booked.includes(requestedKey) && requestedKey !== currentKey) {
       return {
@@ -187,7 +213,7 @@ function cancel_(name) {
 
   try {
     const reservationSheet = getReservationSheet_();
-    const reservation = findReservationByName_(reservationSheet, normalized);
+    const reservation = findReservationInRows_(readReservations_(reservationSheet), normalized);
 
     if (!reservation || !reservation.date || !reservation.time) {
       return { ok: false, message: '取り消せる予約がありません。' };
@@ -203,31 +229,58 @@ function cancel_(name) {
 }
 
 function getBookedSlots_() {
-  return getBookedSlotsFromSheet_(getReservationSheet_());
+  return getBookedSlotsFromReservations_(readReservations_(getReservationSheet_()));
 }
 
-function getBookedSlotsFromSheet_(sheet) {
+function readReservations_(sheet) {
   const lastRow = sheet.getLastRow();
   if (lastRow < CONFIG.RES_FIRST_DATA_ROW) return [];
 
   const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
   const values = sheet
-    .getRange(CONFIG.RES_FIRST_DATA_ROW, CONFIG.RES_COL_DATE, rowCount, 2)
+    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, 7)
     .getDisplayValues();
 
-  const set = new Set();
+  const rows = [];
 
   for (let i = 0; i < values.length; i++) {
-    const date = normalizeSheetDate_(String(values[i][0] || '').trim());
-    const time = normalizeTime_(String(values[i][1] || '').trim());
-    if (!date || !time) continue;
-    if (date < CONFIG.START_DATE || date > CONFIG.END_DATE) continue;
-    set.add(date + ' ' + time);
+    const name = String(values[i][0] || '').trim();
+    if (!name) continue;
+
+    rows.push({
+      row: CONFIG.RES_FIRST_DATA_ROW + i,
+      name: name,
+      normalizedName: normalizeName_(name),
+      date: normalizeSheetDate_(String(values[i][1] || '').trim()),
+      time: normalizeTime_(String(values[i][2] || '').trim()),
+      meetingDc: String(values[i][3] || '').trim(),
+      useX: String(values[i][4] || '').toLowerCase() === 'true',
+      xAccount: String(values[i][5] || '').trim(),
+      updatedAt: String(values[i][6] || '').trim()
+    });
   }
+
+  return rows;
+}
+
+function findReservationInRows_(reservations, normalizedName) {
+  for (let i = 0; i < reservations.length; i++) {
+    if (reservations[i].normalizedName === normalizedName) return reservations[i];
+  }
+  return null;
+}
+
+function getBookedSlotsFromReservations_(reservations) {
+  const set = new Set();
+
+  reservations.forEach(reservation => {
+    if (!reservation.date || !reservation.time) return;
+    if (reservation.date < CONFIG.START_DATE || reservation.date > CONFIG.END_DATE) return;
+    set.add(reservation.date + ' ' + reservation.time);
+  });
 
   return Array.from(set).sort();
 }
-
 
 function findMember_(sheet, normalizedName) {
   const lastRow = sheet.getLastRow();
@@ -258,33 +311,93 @@ function findMember_(sheet, normalizedName) {
   return null;
 }
 
-function findReservationByName_(sheet, normalizedName) {
+function getMaintenancePeriodsFromSheet_(sheet) {
   const lastRow = sheet.getLastRow();
-  if (lastRow < CONFIG.RES_FIRST_DATA_ROW) return null;
+  if (lastRow < 2) return [];
 
-  const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
-  const values = sheet
-    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, 7)
-    .getDisplayValues();
+  const values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+  const periods = [];
 
-  for (let i = 0; i < values.length; i++) {
-    const name = String(values[i][0] || '').trim();
-    if (!name) continue;
-    if (normalizeName_(name) !== normalizedName) continue;
+  values.forEach(row => {
+    if (row[0] !== true) return;
+    if (!(row[1] instanceof Date) || !(row[2] instanceof Date)) return;
 
-    return {
-      row: CONFIG.RES_FIRST_DATA_ROW + i,
-      name: name,
-      date: normalizeSheetDate_(String(values[i][1] || '').trim()),
-      time: normalizeTime_(String(values[i][2] || '').trim()),
-      meetingDc: String(values[i][3] || '').trim(),
-      useX: String(values[i][4] || '').toLowerCase() === 'true',
-      xAccount: String(values[i][5] || '').trim(),
-      updatedAt: String(values[i][6] || '').trim()
-    };
-  }
+    const startMs = dateToJstPseudoMs_(row[1]);
+    const endMs = dateToJstPseudoMs_(row[2]);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return;
 
-  return null;
+    periods.push({
+      startMs: startMs,
+      endMs: endMs,
+      start: Utilities.formatDate(row[1], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
+      end: Utilities.formatDate(row[2], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
+      message: String(row[3] || '').trim()
+    });
+  });
+
+  periods.sort((a,b) => a.startMs - b.startMs);
+  return periods;
+}
+
+function publicMaintenance_(period) {
+  return {
+    start: period.start,
+    end: period.end,
+    message: period.message || ''
+  };
+}
+
+function dateToJstPseudoMs_(date) {
+  const text = Utilities.formatDate(date, CONFIG.TIME_ZONE, 'yyyy-MM-dd HH:mm');
+  return localStampToPseudoMs_(text);
+}
+
+function localStampToPseudoMs_(value) {
+  const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
+  if (!m) return NaN;
+  return Date.UTC(
+    Number(m[1]),
+    Number(m[2]) - 1,
+    Number(m[3]),
+    Number(m[4]),
+    Number(m[5])
+  );
+}
+
+function slotStartPseudoMs_(date, time) {
+  return localStampToPseudoMs_(date + ' ' + time);
+}
+
+function isSlotInMaintenance_(date, time, maintenance) {
+  const slotStart = slotStartPseudoMs_(date, time);
+  const slotEnd = slotStart + CONFIG.SLOT_MINUTES * 60 * 1000;
+
+  return maintenance.some(period =>
+    slotStart < period.endMs && slotEnd > period.startMs
+  );
+}
+
+function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) {
+  if (!maintenance.length || !reservations.length) return reservations;
+
+  const removeRows = [];
+  const keep = [];
+
+  reservations.forEach(reservation => {
+    const overlaps =
+      reservation.date &&
+      reservation.time &&
+      isSlotInMaintenance_(reservation.date, reservation.time, maintenance);
+
+    if (overlaps && !reservation.useX) {
+      removeRows.push(reservation.row);
+    } else {
+      keep.push(reservation);
+    }
+  });
+
+  removeRows.sort((a,b) => b-a).forEach(row => sheet.deleteRow(row));
+  return keep;
 }
 
 function upsertReservation_(sheet, existing, data) {
@@ -437,13 +550,18 @@ function getMemberSheet_() {
   return sheet;
 }
 
-function getReservationSheet_() {
-  const ss = SpreadsheetApp.openById(CONFIG.RESERVATION_SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.RESERVATION_SHEET_NAME);
-  if (!sheet) {
-    throw new Error('「' + CONFIG.RESERVATION_SHEET_NAME + '」シートがありません。');
-  }
+function getReservationSpreadsheet_() {
+  return SpreadsheetApp.openById(CONFIG.RESERVATION_SPREADSHEET_ID);
+}
+
+function getSheetFrom_(ss, sheetName) {
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) throw new Error('「' + sheetName + '」シートがありません。');
   return sheet;
+}
+
+function getReservationSheet_() {
+  return getSheetFrom_(getReservationSpreadsheet_(), CONFIG.RESERVATION_SHEET_NAME);
 }
 
 function sanitizeCallback_(value) {
