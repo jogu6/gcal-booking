@@ -109,6 +109,44 @@ p,li{line-height:1.8}
     inset 0 1px 0 rgba(255,255,255,.035),
     0 1px 0 rgba(0,0,0,.38);
 }
+.booking-guidance{
+  display:grid;
+  gap:8px;
+}
+.guidance-change{color:#d9ecff}
+.guidance-change-key{
+  color:#86c4ff;
+  font-weight:700;
+}
+.guidance-cancel{color:#ffe0e0}
+.guidance-cancel-key{
+  color:#ff9e9e;
+  font-weight:700;
+}
+.inline-action{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  padding:0 2px;
+  margin:0;
+  background:transparent;
+  color:#9fd6ff;
+  font:inherit;
+  font-weight:700;
+  text-decoration:underline;
+  text-decoration-thickness:1px;
+  text-underline-offset:3px;
+  cursor:pointer;
+}
+.inline-action:hover{
+  color:#d7efff;
+  text-shadow:0 0 8px rgba(120,190,245,.35);
+}
+.inline-action:focus-visible{
+  outline:2px solid rgba(143,194,255,.75);
+  outline-offset:3px;
+  border-radius:3px;
+}
 .day{margin-bottom:24px}
 .day-title{
   font-weight:700;
@@ -701,9 +739,14 @@ input:not([type="hidden"]):focus{
     </div>
 
     <p class="small">予約済みの枠には時間帯だけ「予約済み」と表示します。予約者のキャラクター名やDCなどは他の方には表示されません。</p>
-    <div class="notice">
-      予約日時を変更したい場合は、再度、予約の操作を行ってください。<br>
-      予約を取り消したい場合は、画面下にお名前を入力して、「予約を検索します」ボタンを押してください。
+    <div class="notice booking-guidance">
+      <div class="guidance-change">
+        予約日時を<span class="guidance-change-key">変更したい場合</span>は、再度、予約の操作を行ってください。
+      </div>
+      <div class="guidance-cancel">
+        予約を<span class="guidance-cancel-key">取り消したい場合</span>は、
+        <button id="scrollToCancel" type="button" class="inline-action">画面下にお名前を入力して</button>、「予約を検索します」ボタンを押してください。
+      </div>
     </div>
   </section>
 
@@ -784,6 +827,13 @@ input:not([type="hidden"]):focus{
   const EXPECTED_API_VERSION = "2026.10.08.1";
 
   const START_DATE = "2026-10-11";
+
+  const scrollToCancel=document.getElementById("scrollToCancel");
+  scrollToCancel.addEventListener("click",()=>{
+    const target=document.getElementById("cancelCard");
+    target.scrollIntoView({behavior:"smooth",block:"start"});
+    setTimeout(()=>document.getElementById("cancelCharacterName").focus(),350);
+  });
   const END_DATE = "2026-10-18";
   const HOLIDAYS = new Set(["2026-10-12"]);
   let bookedSlots = new Set();
