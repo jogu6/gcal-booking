@@ -12,6 +12,7 @@ const CONFIG = {
   START_MINUTE: 8 * 60,
   END_MINUTE: 24 * 60,
   SLOT_MINUTES: 30,
+  SLOT_CACHE_SECONDS: 15,
 
   MEMBER_FIRST_DATA_ROW: 4,
   MEMBER_COL_NAME: 2,
@@ -72,18 +73,10 @@ function member_(name) {
   const normalized = normalizeName_(name);
   if (!normalized) return { ok: true, found: false, dc: '' };
 
-  const memberSheet = getMemberSheet_();
-  const member = findMember_(memberSheet, normalized);
+  const member = findMember_(getMemberSheet_(), normalized);
   if (!member) return { ok: true, found: false, dc: '' };
 
-  const home = String(
-    memberSheet.getRange(member.row, CONFIG.MEMBER_COL_HOME).getDisplayValue() || ''
-  ).trim();
-  const homeDc = home.includes('/') ? home.split('/')[0] : home;
-
-  const status = String(
-    memberSheet.getRange(member.row, CONFIG.MEMBER_COL_STATUS).getDisplayValue() || ''
-  ).trim();
+  const homeDc = member.home.includes('/') ? member.home.split('/')[0] : member.home;
 
   const reservation = findReservationByName_(getReservationSheet_(), normalized);
   const hasBooking = !!reservation && !!reservation.date && !!reservation.time;
@@ -95,8 +88,8 @@ function member_(name) {
     meetingDc: hasBooking && ['Elemental','Gaia','Mana','Meteor'].includes(reservation.meetingDc)
       ? reservation.meetingDc
       : '',
-    eligible: status === '未招待',
-    sourceStatus: status,
+    eligible: member.status === '未招待',
+    sourceStatus: member.status,
     canCancel: hasBooking,
     bookingDate: hasBooking ? reservation.date : '',
     bookingTime: hasBooking ? reservation.time : '',
@@ -123,9 +116,7 @@ function book_(input) {
       };
     }
 
-    const status = String(
-      memberSheet.getRange(member.row, CONFIG.MEMBER_COL_STATUS).getDisplayValue() || ''
-    ).trim();
+    const status = member.status;
 
     if (status === '登録完了') {
       return { ok: false, message: 'このキャラクターはすでに登録完了しています。' };
@@ -150,7 +141,7 @@ function book_(input) {
       : '';
 
     const requestedKey = input.date + ' ' + input.time;
-    const booked = getBookedSlots_();
+    const booked = getBookedSlotsFromSheet_(reservationSheet);
 
     if (booked.includes(requestedKey) && requestedKey !== currentKey) {
       return {
@@ -168,6 +159,7 @@ function book_(input) {
       useX: !!input.useX,
       xAccount: input.xAccount || ''
     });
+    clearSlotCache_();
 
     return {
       ok: true,
@@ -189,16 +181,6 @@ function cancel_(name) {
   lock.waitLock(10000);
 
   try {
-    const memberSheet = getMemberSheet_();
-    const member = findMember_(memberSheet, normalized);
-
-    if (!member) {
-      return {
-        ok: false,
-        message: '名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。'
-      };
-    }
-
     const reservationSheet = getReservationSheet_();
     const reservation = findReservationByName_(reservationSheet, normalized);
 
@@ -208,6 +190,7 @@ function cancel_(name) {
 
     const oldKey = reservation.date + ' ' + reservation.time;
     reservationSheet.deleteRow(reservation.row);
+    clearSlotCache_();
 
     return { ok: true, oldKey: oldKey };
   } finally {
@@ -216,7 +199,20 @@ function cancel_(name) {
 }
 
 function getBookedSlots_() {
-  const sheet = getReservationSheet_();
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('bookedSlotsV1');
+  if (cached !== null) {
+    try {
+      return JSON.parse(cached);
+    } catch (_) {}
+  }
+
+  const slots = getBookedSlotsFromSheet_(getReservationSheet_());
+  cache.put('bookedSlotsV1', JSON.stringify(slots), CONFIG.SLOT_CACHE_SECONDS);
+  return slots;
+}
+
+function getBookedSlotsFromSheet_(sheet) {
   const lastRow = sheet.getLastRow();
   if (lastRow < CONFIG.RES_FIRST_DATA_ROW) return [];
 
@@ -227,36 +223,46 @@ function getBookedSlots_() {
 
   const set = new Set();
 
-  values.forEach(row => {
-    const date = normalizeSheetDate_(String(row[0] || '').trim());
-    const time = normalizeTime_(String(row[1] || '').trim());
-    if (!date || !time) return;
-    if (date < CONFIG.START_DATE || date > CONFIG.END_DATE) return;
+  for (let i = 0; i < values.length; i++) {
+    const date = normalizeSheetDate_(String(values[i][0] || '').trim());
+    const time = normalizeTime_(String(values[i][1] || '').trim());
+    if (!date || !time) continue;
+    if (date < CONFIG.START_DATE || date > CONFIG.END_DATE) continue;
     set.add(date + ' ' + time);
-  });
+  }
 
   return Array.from(set).sort();
+}
+
+function clearSlotCache_() {
+  CacheService.getScriptCache().remove('bookedSlotsV1');
 }
 
 function findMember_(sheet, normalizedName) {
   const lastRow = sheet.getLastRow();
   if (lastRow < CONFIG.MEMBER_FIRST_DATA_ROW) return null;
 
-  const names = sheet
+  const rowCount = lastRow - CONFIG.MEMBER_FIRST_DATA_ROW + 1;
+  const values = sheet
     .getRange(
       CONFIG.MEMBER_FIRST_DATA_ROW,
       CONFIG.MEMBER_COL_NAME,
-      lastRow - CONFIG.MEMBER_FIRST_DATA_ROW + 1,
-      1
+      rowCount,
+      3
     )
     .getDisplayValues();
 
-  for (let i = 0; i < names.length; i++) {
-    const name = String(names[i][0] || '').trim();
+  for (let i = 0; i < values.length; i++) {
+    const name = String(values[i][0] || '').trim();
     if (!name) continue;
-    if (normalizeName_(name) === normalizedName) {
-      return { row: CONFIG.MEMBER_FIRST_DATA_ROW + i, name: name };
-    }
+    if (normalizeName_(name) !== normalizedName) continue;
+
+    return {
+      row: CONFIG.MEMBER_FIRST_DATA_ROW + i,
+      name: name,
+      home: String(values[i][1] || '').trim(),
+      status: String(values[i][2] || '').trim()
+    };
   }
   return null;
 }
