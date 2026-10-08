@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.08.2',
+  APP_VERSION: '2026.10.08.3',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -382,6 +382,7 @@ function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) 
 
   const removeRows = [];
   const keep = [];
+  const autoCancelled = [];
 
   reservations.forEach(reservation => {
     const overlaps =
@@ -391,13 +392,78 @@ function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) 
 
     if (overlaps && !reservation.useX) {
       removeRows.push(reservation.row);
+      autoCancelled.push(reservation);
     } else {
       keep.push(reservation);
     }
   });
 
   removeRows.sort((a,b) => b-a).forEach(row => sheet.deleteRow(row));
+
+  if (autoCancelled.length) {
+    notifyDiscordAutoCancelled_(autoCancelled, maintenance);
+  }
+
   return keep;
+}
+
+function notifyDiscordAutoCancelled_(reservations, maintenance) {
+  const webhookUrl = PropertiesService
+    .getScriptProperties()
+    .getProperty('DISCORD_WEBHOOK_URL');
+
+  if (!webhookUrl) return;
+
+  const lines = [
+    '【メンテナンスによる予約の自動キャンセル】',
+    ''
+  ];
+
+  reservations.forEach((reservation, index) => {
+    const matchingPeriods = maintenance.filter(period =>
+      isSlotInMaintenance_(reservation.date, reservation.time, [period])
+    );
+
+    lines.push(
+      (index + 1) + '. ' + reservation.name,
+      '予約日時: ' + reservation.date + ' ' + reservation.time,
+      '集合DC: ' + (reservation.meetingDc || '指定なし'),
+      'X利用: なし'
+    );
+
+    if (matchingPeriods.length) {
+      const period = matchingPeriods[0];
+      lines.push(
+        'メンテナンス: ' +
+          period.start.replace('T',' ') +
+          ' ～ ' +
+          period.end.replace('T',' ')
+      );
+
+      if (period.message) {
+        lines.push('案内: ' + period.message);
+      }
+    }
+
+    lines.push('');
+  });
+
+  lines.push('上記予約は予約管理シートから自動削除されました。');
+
+  const payload = {
+    content: lines.join('\n')
+  };
+
+  try {
+    UrlFetchApp.fetch(webhookUrl, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (err) {
+    console.error('Discord Webhook通知に失敗しました: ' + err);
+  }
 }
 
 function upsertReservation_(sheet, existing, data) {
