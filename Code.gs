@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.08.6',
+  APP_VERSION: '2026.10.08.7',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -470,16 +470,61 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
 
   const payload = { embeds: embeds };
 
-  try {
-    UrlFetchApp.fetch(webhookUrl, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-  } catch (err) {
-    console.error('Discord Webhook通知に失敗しました: ' + err);
+  const response = UrlFetchApp.fetch(webhookUrl, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) {
+    throw new Error(
+      'Discord Webhook通知に失敗しました。HTTP ' +
+      status +
+      ': ' +
+      response.getContentText()
+    );
   }
+}
+
+function testDiscordWebhook() {
+  const webhookUrl = PropertiesService
+    .getScriptProperties()
+    .getProperty('DISCORD_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    throw new Error('スクリプトプロパティ DISCORD_WEBHOOK_URL が設定されていません。');
+  }
+
+  const payload = {
+    embeds: [{
+      title: 'Discord Webhook 接続テスト',
+      description: '予約システムからDiscordへの通知テストです。',
+      footer: {
+        text: Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd HH:mm:ss')
+      }
+    }]
+  };
+
+  const response = UrlFetchApp.fetch(webhookUrl, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) {
+    throw new Error(
+      'Discord Webhookテストに失敗しました。HTTP ' +
+      status +
+      ': ' +
+      response.getContentText()
+    );
+  }
+
+  console.log('Discord Webhookテスト成功: HTTP ' + status);
 }
 
 function upsertReservation_(sheet, existing, data) {
