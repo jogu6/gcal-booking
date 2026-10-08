@@ -408,8 +408,12 @@ button.slot.maintenance{
   background:linear-gradient(180deg,rgba(101,75,52,.82),rgba(69,51,37,.88));
   color:#f2d7bb;
   border-color:rgba(207,158,112,.42);
-  cursor:default;
+  cursor:pointer;
   font-weight:700;
+}
+button.slot.maintenance:hover{
+  background:linear-gradient(180deg,rgba(121,88,58,.90),rgba(82,59,41,.94));
+  border-color:rgba(226,177,127,.62);
 }
 .prep-note{
   margin:18px 0 20px;
@@ -774,8 +778,8 @@ button.slot.maintenance{
     <div class="maintenance-policy-note">
       <strong>臨時メンテナンスについて</strong><br>
       期間中、FF14の臨時メンテナンス等が入る場合があります。<br>
-      メンテナンス時間帯と重なる予約のうち、Xでのやりとりを希望していない予約は自動的にキャンセルされます。あらかじめご了承ください。<br>
-      Xでのやりとりを希望している予約は、自動キャンセルの対象外です。
+      メンテナンス時間帯は、Xでのやりとりを希望する予約のみ受け付けます。<br>
+      すでに入っている予約のうち、Xでのやりとりを希望していない予約は自動的にキャンセルされます。あらかじめご了承ください。
       <div id="maintenanceSchedule" class="maintenance-schedule hidden"></div>
     </div>
 
@@ -907,7 +911,7 @@ button.slot.maintenance{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbxlfVVpOYcYaXTC7RfWELtbKr1uOvbQRymvoZwZrO5EaiyHPy6jBDyDbC_R89t66tZB/exec";
-  const EXPECTED_API_VERSION = "2026.10.08.4";
+  const EXPECTED_API_VERSION = "2026.10.08.5";
 
   const START_DATE = "2026-10-11";
 
@@ -922,6 +926,7 @@ button.slot.maintenance{
   let bookedSlots = new Set();
   let maintenancePeriods = [];
   let selected = null;
+  let selectedRequiresX = false;
 
   const pad2 = n => String(n).padStart(2, "0");
 
@@ -1163,6 +1168,9 @@ button.slot.maintenance{
       if(result.canCancel){
         setXEnabled(!!result.useX,result.xAccount || "");
       }
+      if(selectedRequiresX){
+        setXEnabled(true,result.xAccount || "");
+      }
       xContactPanel.classList.remove("hidden");
       xAccountRow.classList.toggle("hidden",!useX.checked);
 
@@ -1328,8 +1336,8 @@ button.slot.maintenance{
           btn.textContent=`${time} 予約済み`;
         }else if(isMaintenanceSlot(d,time)){
           btn.classList.add("maintenance");
-          btn.disabled=true;
-          btn.textContent=`${time} メンテナンス`;
+          btn.textContent=`${time} Xのみ`;
+          btn.addEventListener("click",()=>selectSlot(d,time,btn));
         }else if(isBeforeReceptionStart(d,time)){
           btn.classList.add("past");
           btn.disabled=true;
@@ -1413,6 +1421,7 @@ button.slot.maintenance{
     document.querySelectorAll(".slot.selected").forEach(x=>x.classList.remove("selected"));
     button.classList.add("selected");
     selected={date,time};
+    selectedRequiresX=isMaintenanceSlot(date,time);
 
     const selectedDate=parseDate(date);
     const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
@@ -1454,6 +1463,12 @@ button.slot.maintenance{
   }
 
   useX.addEventListener("change",()=>{
+    if(selectedRequiresX && !useX.checked){
+      useX.checked=true;
+      xAccountRow.classList.remove("hidden");
+      showMessage("メンテナンス時間帯はXでのやりとりが必須です。","error");
+      return;
+    }
     xAccountRow.classList.toggle("hidden",!useX.checked);
     if(!useX.checked) xAccountInput.value="";
   });
@@ -1623,6 +1638,10 @@ button.slot.maintenance{
     const needsDc=selected.date==="2026-10-11" || selected.date==="2026-10-12";
     if(needsDc && !dc) return showMessage("集合希望DCを選択してください。","error");
 
+    if(selectedRequiresX && !useX.checked){
+      return showMessage("メンテナンス時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
+    }
+
     let xAccount="";
     if(useX.checked){
       xAccount=normalizeXAccount(xAccountInput.value);
@@ -1659,6 +1678,7 @@ button.slot.maintenance{
       bookedSlots.add(bookedKey);
       renderCalendar();
       selected=null;
+      selectedRequiresX=false;
       verifiedMember=false;
       verifiedMemberName="";
       document.getElementById("characterName").value="";
@@ -1678,13 +1698,8 @@ button.slot.maintenance{
         selected=null;
         document.getElementById("formCard").classList.add("hidden");
         showGlobalNotice("その時刻は他の方に先に予約されました。別の時刻を選択してください。","error");
-      }else if(err.code==="MAINTENANCE"){
-        const maintenanceKey=selected ? `${selected.date} ${selected.time}` : null;
-        await loadSlots();
-        if(maintenanceKey) scrollToSlot(maintenanceKey);
-        selected=null;
-        document.getElementById("formCard").classList.add("hidden");
-        showGlobalNotice("その時間帯はメンテナンス予定になりました。別の時刻を選択してください。","error");
+      }else if(err.code==="MAINTENANCE_X_REQUIRED"){
+        showMessage("メンテナンス時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
       }else{
         showMessage(message,"error");
       }
