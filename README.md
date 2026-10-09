@@ -227,9 +227,9 @@ Webhook URLは Apps Script のスクリプトプロパティへ保存します�
 
 ## Apps Script の配置
 
-Apps Script は非公開予約管理スプレッドシートに紐づけて運用します。
+Apps Script はスタンドアロンプロジェクトとして運用します。
 
-旧 `FF14 登録サポート予約管理` 側の Apps Script は、新環境の動作確認後は不要です。
+Google Sheets とは `SpreadsheetApp.openById()` で接続するため、スプレッドシート編集者に Apps Script の編集権限を与える必要はありません。
 
 ## Apps Script のデプロイ
 
