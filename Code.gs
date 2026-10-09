@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.09.2',
+  APP_VERSION: '2026.10.09.3',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -286,7 +286,10 @@ function readReservations_(sheet) {
       date: normalizeSheetDate_(String(values[i][1] || '').trim()),
       time: normalizeTime_(String(values[i][2] || '').trim()),
       meetingDc: String(values[i][3] || '').trim(),
-      useX: String(values[i][4] || '').toLowerCase() === 'true',
+      useX: (() => {
+        const xValue = String(values[i][4] || '').trim();
+        return xValue.toLowerCase() === 'true' || xValue === 'Xでやりとりを希望';
+      })(),
       xAccount: String(values[i][5] || '').trim(),
       updatedAt: String(values[i][6] || '').trim()
     });
@@ -701,7 +704,7 @@ function upsertReservation_(sheet, existing, data) {
     data.date,
     data.time,
     data.meetingDc || '',
-    data.useX ? true : '',
+    data.useX ? 'Xでやりとりを希望' : '',
     data.useX ? data.xAccount : '',
     updatedAt
   ]];
@@ -722,7 +725,7 @@ function sortReservations_(sheet) {
 
   const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
   sheet
-    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, 7)
+    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, sheet.getLastColumn())
     .sort([
       { column: CONFIG.RES_COL_DATE, ascending: true },
       { column: CONFIG.RES_COL_TIME, ascending: true }
