@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.09.1',
+  APP_VERSION: '2026.10.09.2',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -712,6 +712,21 @@ function upsertReservation_(sheet, existing, data) {
     const row = Math.max(sheet.getLastRow() + 1, CONFIG.RES_FIRST_DATA_ROW);
     sheet.getRange(row, 1, 1, 7).setValues(rowValues);
   }
+
+  sortReservations_(sheet);
+}
+
+function sortReservations_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < CONFIG.RES_FIRST_DATA_ROW) return;
+
+  const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
+  sheet
+    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, 7)
+    .sort([
+      { column: CONFIG.RES_COL_DATE, ascending: true },
+      { column: CONFIG.RES_COL_TIME, ascending: true }
+    ]);
 }
 
 function normalizeName_(value) {
