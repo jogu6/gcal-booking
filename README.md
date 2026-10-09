@@ -275,6 +275,12 @@ Apps Script の「プロジェクトの設定」→「スクリプト プロパ�
 
 これにより、GitHub Pages だけ更新されて Apps Script の再デプロイを忘れた状態を検出できます。
 
+## Apps Script の配置
+
+Apps Script は `くまたんグループ 予約管理（非公開）` に紐づけて運用します。
+
+旧 `FF14 登録サポート予約管理` 側の Apps Script は、移行後の動作確認が完了した時点で不要です。
+
 ## Apps Script のデプロイ
 
 `Code.gs` を変更した場合は Apps Script の Web アプリを更新してください。
