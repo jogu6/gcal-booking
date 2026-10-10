@@ -608,10 +608,11 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
   if (!webhookUrl) return;
 
   const embeds = reservations.map(reservation => {
-    const matchingPeriods = maintenance.filter(period =>
-      isSlotInMaintenance_(reservation.date, reservation.time, [period])
+    const period = getMaintenanceForSlot_(
+      reservation.date,
+      reservation.time,
+      maintenance
     );
-    const period = matchingPeriods.length ? matchingPeriods[0] : null;
 
     const fields = [
       {
