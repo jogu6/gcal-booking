@@ -400,6 +400,16 @@ input:not([type="hidden"]):focus{
   font-weight:700;
   color:#f3cfad;
 }
+.maintenance-period-mode{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 7px;
+  border:1px solid rgba(232,183,139,.32);
+  border-radius:5px;
+  color:#f1d2b4;
+  font-size:.9em;
+  font-weight:700;
+}
 .maintenance-period-message{
   margin-left:8px;
   color:#d9c6b8;
@@ -414,6 +424,12 @@ button.slot.maintenance{
 button.slot.maintenance:hover{
   background:linear-gradient(180deg,rgba(121,88,58,.90),rgba(82,59,41,.94));
   border-color:rgba(226,177,127,.62);
+}
+button.slot.maintenance-closed{
+  background:linear-gradient(180deg,rgba(82,57,57,.82),rgba(55,40,42,.90));
+  color:#d8b8b8;
+  border-color:rgba(177,116,116,.34);
+  cursor:default;
 }
 .prep-note{
   margin:18px 0 20px;
@@ -778,8 +794,9 @@ button.slot.maintenance:hover{
     <div class="maintenance-policy-note">
       <strong>臨時メンテナンスについて</strong><br>
       期間中、FF14の臨時メンテナンス等が入る場合があります。<br>
-      メンテナンス時間帯は、Xでのやりとりを希望する予約のみ受け付けます。<br>
-      すでに入っている予約のうち、Xでのやりとりを希望していない予約は自動的にキャンセルされます。あらかじめご了承ください。
+      メンテナンス設定により「Xのみ受付」または「受付停止」になる場合があります。<br>
+      「Xのみ受付」ではXでのやりとりを希望する予約だけ受け付け、「受付停止」ではX利用を含むすべての予約受付を停止します。<br>
+      対象時間帯の既存予約も設定内容に応じて自動的にキャンセルされます。あらかじめご了承ください。
       <div id="maintenanceSchedule" class="maintenance-schedule hidden"></div>
     </div>
 
@@ -911,7 +928,7 @@ button.slot.maintenance:hover{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.09.3";
+  const EXPECTED_API_VERSION = "2026.10.10.1";
 
   let START_DATE = "2026-10-11";
 
@@ -1077,14 +1094,25 @@ button.slot.maintenance:hover{
     return Date.UTC(y,m-1,d,hh,mm);
   }
 
-  function isMaintenanceSlot(date,time){
+  function getMaintenanceForSlot(date,time){
     const start=slotMs(date,time);
     const end=start+30*60*1000;
-    return maintenancePeriods.some(period=>{
+    const matches=maintenancePeriods.filter(period=>{
       const pStart=localStampMs(period.start);
       const pEnd=localStampMs(period.end);
       return Number.isFinite(pStart) && Number.isFinite(pEnd) && start<pEnd && end>pStart;
     });
+    if(!matches.length) return null;
+    return matches.find(period=>period.mode==="closed") || matches[0];
+  }
+
+  function isMaintenanceSlot(date,time){
+    return !!getMaintenanceForSlot(date,time);
+  }
+
+  function isMaintenanceXOnlySlot(date,time){
+    const period=getMaintenanceForSlot(date,time);
+    return !!period && period.mode!=="closed";
   }
 
   function displayMaintenanceStamp(value){
@@ -1115,6 +1143,11 @@ button.slot.maintenance:hover{
       time.textContent=displayMaintenanceStamp(period.start)+" ～ "+displayMaintenanceStamp(period.end);
 
       row.appendChild(time);
+
+      const mode=document.createElement("span");
+      mode.className="maintenance-period-mode";
+      mode.textContent=period.mode==="closed" ? "受付停止" : "Xのみ受付";
+      row.appendChild(mode);
 
       if(period.message){
         const msg=document.createElement("span");
@@ -1402,9 +1435,17 @@ button.slot.maintenance:hover{
           btn.disabled=true;
           btn.textContent=`${time} 予約済み`;
         }else if(isMaintenanceSlot(d,time)){
+          const period=getMaintenanceForSlot(d,time);
           btn.classList.add("maintenance");
-          btn.textContent=`${time} Xのみ`;
-          btn.addEventListener("click",()=>selectSlot(d,time,btn));
+
+          if(period && period.mode==="closed"){
+            btn.classList.add("maintenance-closed");
+            btn.disabled=true;
+            btn.textContent=`${time} 受付停止`;
+          }else{
+            btn.textContent=`${time} Xのみ`;
+            btn.addEventListener("click",()=>selectSlot(d,time,btn));
+          }
         }else if(isBeforeReceptionStart(d,time)){
           btn.classList.add("past");
           btn.disabled=true;
@@ -1488,7 +1529,7 @@ button.slot.maintenance:hover{
     document.querySelectorAll(".slot.selected").forEach(x=>x.classList.remove("selected"));
     button.classList.add("selected");
     selected={date,time};
-    selectedRequiresX=isMaintenanceSlot(date,time);
+    selectedRequiresX=isMaintenanceXOnlySlot(date,time);
 
     const selectedDate=parseDate(date);
     const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
@@ -1768,7 +1809,15 @@ button.slot.maintenance:hover{
         document.getElementById("formCard").classList.add("hidden");
         showGlobalNotice("その時刻は他の方に先に予約されました。別の時刻を選択してください。","error");
       }else if(err.code==="MAINTENANCE_X_REQUIRED"){
-        showMessage("メンテナンス時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
+        showMessage("この時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
+      }else if(err.code==="MAINTENANCE_CLOSED"){
+        const maintenanceKey=selected ? `${selected.date} ${selected.time}` : null;
+        await loadSlots();
+        if(maintenanceKey) scrollToSlot(maintenanceKey);
+        selected=null;
+        selectedRequiresX=false;
+        document.getElementById("formCard").classList.add("hidden");
+        showGlobalNotice("その時間帯は受付停止になりました。別の時刻を選択してください。","error");
       }else{
         showMessage(message,"error");
       }
