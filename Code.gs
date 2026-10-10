@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.09.3',
+  APP_VERSION: '2026.10.10.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -165,11 +165,21 @@ function book_(input) {
     const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
     const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
 
-    if (isSlotInMaintenance_(input.date, input.time, maintenance) && !input.useX) {
+    const maintenanceForSlot = getMaintenanceForSlot_(input.date, input.time, maintenance);
+
+    if (maintenanceForSlot && maintenanceForSlot.mode === 'closed') {
+      return {
+        ok: false,
+        code: 'MAINTENANCE_CLOSED',
+        message: 'この時間帯は受付を停止しています。'
+      };
+    }
+
+    if (maintenanceForSlot && !input.useX) {
       return {
         ok: false,
         code: 'MAINTENANCE_X_REQUIRED',
-        message: 'メンテナンス時間帯は、Xでのやりとりを希望する予約のみ受け付けています。'
+        message: 'この時間帯は、Xでのやりとりを希望する予約のみ受け付けています。'
       };
     }
 
@@ -378,7 +388,7 @@ function getMaintenancePeriodsFromSheet_(sheet) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
-  const values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+  const values = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
   const periods = [];
 
   values.forEach(row => {
@@ -394,7 +404,8 @@ function getMaintenancePeriodsFromSheet_(sheet) {
       endMs: endMs,
       start: Utilities.formatDate(row[1], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
       end: Utilities.formatDate(row[2], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
-      message: String(row[3] || '').trim()
+      message: String(row[3] || '').trim(),
+      mode: String(row[4] || '').trim() === '受付停止' ? 'closed' : 'x_only'
     });
   });
 
@@ -406,7 +417,8 @@ function publicMaintenance_(period) {
   return {
     start: period.start,
     end: period.end,
-    message: period.message || ''
+    message: period.message || '',
+    mode: period.mode || 'x_only'
   };
 }
 
@@ -431,13 +443,20 @@ function slotStartPseudoMs_(date, time) {
   return localStampToPseudoMs_(date + ' ' + time);
 }
 
-function isSlotInMaintenance_(date, time, maintenance) {
+function getMaintenanceForSlot_(date, time, maintenance) {
   const slotStart = slotStartPseudoMs_(date, time);
   const slotEnd = slotStart + CONFIG.SLOT_MINUTES * 60 * 1000;
 
-  return maintenance.some(period =>
+  const matches = maintenance.filter(period =>
     slotStart < period.endMs && slotEnd > period.startMs
   );
+
+  if (!matches.length) return null;
+  return matches.find(period => period.mode === 'closed') || matches[0];
+}
+
+function isSlotInMaintenance_(date, time, maintenance) {
+  return !!getMaintenanceForSlot_(date, time, maintenance);
 }
 
 function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) {
@@ -448,12 +467,16 @@ function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) 
   const autoCancelled = [];
 
   reservations.forEach(reservation => {
-    const overlaps =
+    const period =
       reservation.date &&
       reservation.time &&
-      isSlotInMaintenance_(reservation.date, reservation.time, maintenance);
+      getMaintenanceForSlot_(reservation.date, reservation.time, maintenance);
 
-    if (overlaps && !reservation.useX) {
+    const shouldCancel =
+      !!period &&
+      (period.mode === 'closed' || !reservation.useX);
+
+    if (shouldCancel) {
       removeRows.push(reservation.row);
       autoCancelled.push(reservation);
     } else {
@@ -608,12 +631,17 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
       },
       {
         name: 'X利用',
-        value: 'なし',
+        value: reservation.useX ? 'あり' : 'なし',
         inline: false
       }
     ];
 
     if (period) {
+      fields.push({
+        name: '受付方式',
+        value: period.mode === 'closed' ? '受付停止' : 'Xのみ受付',
+        inline: false
+      });
       fields.push({
         name: 'メンテナンス時間',
         value: period.start.replace('T',' ') + ' ～ ' + period.end.replace('T',' '),
