@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.7',
+  APP_VERSION: '2026.10.12.8',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -995,7 +995,7 @@ function validateBooking_(input) {
     nowTimeParts[0],
     nowTimeParts[1]
   );
-  const earliestMs = jstNowMs + 60 * 60 * 1000;
+  const earliestMs = jstNowMs + 90 * 60 * 1000;
 
   const dateParts = input.date.split('-').map(Number);
   const timeParts = input.time.split(':').map(Number);
@@ -1008,7 +1008,7 @@ function validateBooking_(input) {
   );
 
   if (slotMs < earliestMs) {
-    throw new Error('予約は現在時刻の1時間後以降を選択してください。');
+    throw new Error('予約は現在時刻の1時間30分後以降を選択してください。');
   }
 
   const normalized = normalizeName_(input.name);
