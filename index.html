@@ -1018,7 +1018,7 @@ button.slot.transition-buffer{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.3";
+  const EXPECTED_API_VERSION = "2026.10.12.4";
 
   let START_DATE = "2026-10-11";
 
@@ -1290,7 +1290,7 @@ button.slot.transition-buffer{
       '<li>同一時間帯に複数名が予約できます。</li>'+
       '<li>選択時刻は対応開始の目安です。</li>'+
       '<li>混雑時はお待ちいただく場合があります。</li>'+
-      '<li>締切後は移行時間となり、新規受付を停止します。</li>'+
+      '<li>締切後はアディショナルタイムとなり、新規受付を停止します。</li>'+
       '<li>通常予約開始後は、通常予約の方を優先します。</li>'+
       '<li>状況により、予定より早く受付を終了する場合があります。</li>'+
       '<li>Xのみ受付と重なる場合は、Xでのやりとりが必須です。</li>'+
@@ -1618,7 +1618,7 @@ button.slot.transition-buffer{
           }else if(specialState?.state==="buffer"){
             btn.classList.add("transition-buffer");
             btn.disabled=true;
-            btn.textContent=`${time} 移行時間`;
+            btn.textContent=`${time} アディショナルタイム`;
           }else if(specialState?.state==="flexible"){
             const count=Number(flexibleSlotCounts[key] || 0);
             btn.classList.add("flexible");
@@ -1633,7 +1633,7 @@ button.slot.transition-buffer{
         }else if(getSpecialReceptionState(d,time)?.state==="buffer"){
           btn.classList.add("transition-buffer");
           btn.disabled=true;
-          btn.textContent=`${time} 移行時間`;
+          btn.textContent=`${time} アディショナルタイム`;
         }else if(getSpecialReceptionState(d,time)?.state==="flexible"){
           const count=Number(flexibleSlotCounts[key] || 0);
           btn.classList.add("flexible");
@@ -2053,7 +2053,7 @@ button.slot.transition-buffer{
         selectedFlexible=false;
         document.getElementById("flexibleSelectedNotice").classList.add("hidden");
         document.getElementById("formCard").classList.add("hidden");
-        showGlobalNotice("その時間帯は通常予約へ切り替えるための移行時間です。別の時刻を選択してください。","error");
+        showGlobalNotice("その時間帯は通常予約へ切り替えるためのアディショナルタイムです。別の時刻を選択してください。","error");
       }else{
         showMessage(message,"error");
       }
