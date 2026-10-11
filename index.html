@@ -442,6 +442,13 @@ input:not([type="hidden"]):focus{
   margin-left:8px;
   color:#d7e6f1;
 }
+.flexible-notice-list{
+  margin:8px 0 0 1.25em;
+  padding:0;
+}
+.flexible-notice-list li{
+  margin:3px 0;
+}
 button.slot.maintenance{
   background:linear-gradient(180deg,rgba(101,75,52,.82),rgba(69,51,37,.88));
   color:#f2d7bb;
@@ -916,10 +923,13 @@ button.slot.transition-buffer{
       </div>
 
       <div id="flexibleSelectedNotice" class="flexible-selected-notice hidden">
-        <strong id="flexibleSelectedTitle">この時間帯は随時受付です。</strong><br>
-        選択した時刻は、対応開始時刻を確約する通常予約ではなく、来訪・対応希望時刻の目安です。<br>
-        混雑状況によってお待ちいただく場合があります。随時受付の締切後は新規受付を停止し、通常予約の開始時刻以降は通常予約の方を優先して対応します。<br>
-        また、当日の状況によっては表示されている締切時刻より前に随時受付を終了する場合があります。
+        <strong id="flexibleSelectedTitle">この時間帯は随時受付です。</strong>
+        <ul class="flexible-notice-list">
+          <li>選択時刻は対応開始の目安です。</li>
+          <li>混雑時はお待ちいただく場合があります。</li>
+          <li>通常予約の開始後は、通常予約の方を優先します。</li>
+          <li>状況により、予定より早く受付を終了する場合があります。</li>
+        </ul>
       </div>
 
       <div class="row">
@@ -1248,11 +1258,15 @@ button.slot.transition-buffer{
 
     el.classList.remove("hidden");
     el.innerHTML=
-      '<strong>随時受付について</strong><br>'+
-      '「随時受付」と表示される時間帯は、30分を1人分として確保する通常予約ではありません。選択した時刻は来訪・対応希望時刻の目安で、対応開始時刻を保証するものではありません。<br>'+
-      '混雑状況によってお待ちいただく場合があります。随時受付の締切後は新規受付を止めて移行時間に入り、通常予約の開始時刻以降は通常予約の方を優先して対応します。<br>'+
-      '当日の状況によっては、表示されている締切時刻より前に随時受付を終了する場合があります。すでに確定している通常予約の時間は随時受付へ変更しません。<br>'+
-      'なお、Xのみ受付の時間帯と重なった場合は「Xのみ・随時受付」となり、Xでのやりとりが必須のまま随時受付として対応します。受付停止と重なった場合は受付停止が優先されます。';
+      '<strong>随時受付について</strong>'+
+      '<ul class="flexible-notice-list">'+
+      '<li>選択時刻は対応開始の目安です。</li>'+
+      '<li>混雑時はお待ちいただく場合があります。</li>'+
+      '<li>締切後は移行時間となり、新規受付を停止します。</li>'+
+      '<li>通常予約開始後は、通常予約の方を優先します。</li>'+
+      '<li>状況により、予定より早く受付を終了する場合があります。</li>'+
+      '<li>Xのみ受付と重なる場合は、Xでのやりとりが必須です。</li>'+
+      '</ul>';
 
     specialReceptionPeriods.forEach(period=>{
       const row=document.createElement("div");
