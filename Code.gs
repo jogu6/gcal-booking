@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.8',
+  APP_VERSION: '2026.10.12.9',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -254,7 +254,9 @@ function book_(input) {
     if (shouldNotifyAllReservationEvents_()) {
       try {
         if (current) {
-          notifyDiscordReservationChanged_(current, savedReservation);
+          if (hasReservationChanged_(current, savedReservation)) {
+            notifyDiscordReservationChanged_(current, savedReservation);
+          }
         } else {
           notifyDiscordReservationCreated_(savedReservation);
         }
@@ -698,6 +700,18 @@ function reservationFields_(reservation) {
       inline: false
     }
   ];
+}
+
+
+function hasReservationChanged_(before, after) {
+  return (
+    String(before.date || '') !== String(after.date || '') ||
+    String(before.time || '') !== String(after.time || '') ||
+    String(before.meetingDc || '') !== String(after.meetingDc || '') ||
+    !!before.useX !== !!after.useX ||
+    String(before.xAccount || '') !== String(after.xAccount || '') ||
+    String(before.mode || 'normal') !== String(after.mode || 'normal')
+  );
 }
 
 function notifyDiscordReservationCreated_(reservation) {
