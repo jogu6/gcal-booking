@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.2',
+  APP_VERSION: '2026.10.12.3',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -12,7 +12,6 @@ const CONFIG = {
   START_DATE: '2026-10-11',
   END_DATE: '2026-10-18',
   ROLLING_START_DATE: '2026-10-12',
-  NOTIFY_ALL_FROM_DATE: '2026-10-19',
   ROLLING_DAYS: 7,
   FIRST_DAY_START_TIME: '18:00',
   START_MINUTE: 8 * 60,
@@ -436,8 +435,7 @@ function addDaysToDateKey_(dateKey, days) {
 }
 
 function shouldNotifyAllReservationEvents_() {
-  const today = Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd');
-  return today >= CONFIG.NOTIFY_ALL_FROM_DATE;
+  return true;
 }
 
 function findMember_(sheet, normalizedName) {
