@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.6',
+  APP_VERSION: '2026.10.12.7',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -1007,22 +1007,7 @@ function validateBooking_(input) {
     timeParts[1]
   );
 
-  const privateSsForTiming = getReservationSpreadsheet_();
-  const specialReceptionSheetForTiming = getSheetFrom_(
-    privateSsForTiming,
-    CONFIG.SPECIAL_RECEPTION_SHEET_NAME
-  );
-  const specialReceptionForTiming =
-    getSpecialReceptionPeriodsFromSheet_(specialReceptionSheetForTiming);
-  const specialStateForTiming = getSpecialReceptionStateForSlot_(
-    input.date,
-    input.time,
-    specialReceptionForTiming
-  );
-  const isFlexibleTiming =
-    !!specialStateForTiming && specialStateForTiming.state === 'flexible';
-
-  if (!isFlexibleTiming && slotMs < earliestMs) {
+  if (slotMs < earliestMs) {
     throw new Error('予約は現在時刻の1時間後以降を選択してください。');
   }
 
