@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.4',
+  APP_VERSION: '2026.10.12.5',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -344,7 +344,7 @@ function readReservations_(sheet) {
       meetingDc: String(values[i][3] || '').trim(),
       useX: (() => {
         const xValue = String(values[i][4] || '').trim();
-        return xValue.toLowerCase() === 'true' || xValue === 'Xでやりとりを希望';
+        return xValue.toLowerCase() === 'true' || xValue === 'Xでやりとりを希望' || xValue === '希望します';
       })(),
       xAccount: String(values[i][5] || '').trim(),
       updatedAt: String(values[i][6] || '').trim(),
@@ -885,7 +885,7 @@ function upsertReservation_(sheet, existing, data) {
     data.date,
     data.time,
     data.meetingDc || '',
-    data.useX ? 'Xでやりとりを希望' : '',
+    data.useX ? '希望します' : '',
     data.useX ? data.xAccount : '',
     updatedAt
   ]];
