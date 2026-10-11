@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.10',
+  APP_VERSION: '2026.10.12.11',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -689,7 +689,7 @@ function reservationFields_(reservation) {
     },
     {
       name: '集合DC',
-      value: reservation.meetingDc || '指定なし',
+      value: reservation.meetingDc || '(DC指定省略)',
       inline: false
     },
     {
@@ -745,7 +745,7 @@ function notifyDiscordReservationChanged_(before, after) {
       },
       {
         name: '集合DC',
-        value: after.meetingDc || '指定なし',
+        value: after.meetingDc || '(DC指定省略)',
         inline: false
       },
       {
@@ -796,7 +796,7 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
       },
       {
         name: '集合DC',
-        value: reservation.meetingDc || '指定なし',
+        value: reservation.meetingDc || '(DC指定省略)',
         inline: false
       },
       {
