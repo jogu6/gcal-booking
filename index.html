@@ -155,27 +155,28 @@ p,li{line-height:1.8}
 .inline-action{
   appearance:none;
   -webkit-appearance:none;
-  min-height:32px;
-  padding:4px 10px;
+  display:inline;
+  min-height:0;
+  padding:0;
   margin:0 4px 0 0;
-  border:1px solid rgba(174,198,217,.40);
-  border-radius:6px;
-  background:linear-gradient(180deg,rgba(62,87,108,.78),rgba(42,62,80,.84));
-  color:#e4eef5;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  color:#c9dce9;
   font:inherit;
   font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:2px;
   cursor:pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 1px 4px rgba(0,0,0,.22);
 }
 .inline-action:hover{
-  border-color:rgba(194,215,231,.58);
-  background:linear-gradient(180deg,rgba(72,99,122,.84),rgba(48,70,90,.90));
+  color:#e2edf5;
+  background:none;
 }
 .inline-action:focus-visible{
-  outline:2px solid rgba(176,203,223,.62);
-  outline-offset:3px;
+  outline:1px solid rgba(176,203,223,.62);
+  outline-offset:2px;
 }
 @media(max-width:600px){
   .guidance-line{
