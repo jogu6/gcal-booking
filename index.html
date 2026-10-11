@@ -1018,7 +1018,7 @@ button.slot.transition-buffer{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.7";
+  const EXPECTED_API_VERSION = "2026.10.12.8";
 
   let START_DATE = "2026-10-11";
 
@@ -1160,7 +1160,7 @@ button.slot.transition-buffer{
       Number(values.hour),
       Number(values.minute)
     );
-    const earliestMs=jstNowMs+60*60*1000;
+    const earliestMs=jstNowMs+90*60*1000;
 
     const [y,m,d]=date.split("-").map(Number);
     const [hh,mm]=time.split(":").map(Number);
