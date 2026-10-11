@@ -1,11 +1,12 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.10.1',
+  APP_VERSION: '2026.10.12.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
   RESERVATION_SPREADSHEET_ID: '12mdeeY6y6xWv71CQdhxQCRxSI19oRPpTMkhlIIFX1vo',
   RESERVATION_SHEET_NAME: '予約管理',
   MAINTENANCE_SHEET_NAME: 'メンテナンス',
+  SPECIAL_RECEPTION_SHEET_NAME: '特別受付',
 
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
@@ -24,7 +25,7 @@ const CONFIG = {
   MEMBER_COL_STATUS: 4,
 
   // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC
-  // E=X利用 F=Xアカウント名 G=更新日時
+  // E=X利用 F=Xアカウント名 G=更新日時 H=対応状況 I=対象者に連絡 J=受付方式
   RES_FIRST_DATA_ROW: 2,
   RES_COL_NAME: 1,
   RES_COL_DATE: 2,
@@ -32,7 +33,8 @@ const CONFIG = {
   RES_COL_MEETING_DC: 4,
   RES_COL_USE_X: 5,
   RES_COL_X_ACCOUNT: 6,
-  RES_COL_UPDATED_AT: 7
+  RES_COL_UPDATED_AT: 7,
+  RES_COL_MODE: 10
 };
 
 function doGet(e) {
@@ -48,7 +50,9 @@ function doGet(e) {
       const privateSs = getReservationSpreadsheet_();
       const reservationSheet = getSheetFrom_(privateSs, CONFIG.RESERVATION_SHEET_NAME);
       const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
+      const specialReceptionSheet = getSheetFrom_(privateSs, CONFIG.SPECIAL_RECEPTION_SHEET_NAME);
       const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
+      const specialReception = getSpecialReceptionPeriodsFromSheet_(specialReceptionSheet);
       let reservations = readReservations_(reservationSheet);
       reservations = reconcileReservationsForMaintenance_(reservationSheet, reservations, maintenance);
 
@@ -56,8 +60,9 @@ function doGet(e) {
 
       result = {
         ok: true,
-        booked: getBookedSlotsFromReservations_(reservations, window),
+        booked: getBookedSlotsFromReservations_(reservations, window, specialReception),
         maintenance: maintenance.map(publicMaintenance_),
+        specialReception: specialReception.map(publicSpecialReception_),
         windowStart: window.start,
         windowEnd: window.end,
         version: CONFIG.APP_VERSION
@@ -163,7 +168,9 @@ function book_(input) {
     const privateSs = getReservationSpreadsheet_();
     const reservationSheet = getSheetFrom_(privateSs, CONFIG.RESERVATION_SHEET_NAME);
     const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
+    const specialReceptionSheet = getSheetFrom_(privateSs, CONFIG.SPECIAL_RECEPTION_SHEET_NAME);
     const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
+    const specialReception = getSpecialReceptionPeriodsFromSheet_(specialReceptionSheet);
 
     const maintenanceForSlot = getMaintenanceForSlot_(input.date, input.time, maintenance);
 
@@ -183,6 +190,20 @@ function book_(input) {
       };
     }
 
+    const specialState = getSpecialReceptionStateForSlot_(
+      input.date,
+      input.time,
+      specialReception
+    );
+
+    if (specialState && specialState.state === 'buffer') {
+      return {
+        ok: false,
+        code: 'SPECIAL_BUFFER',
+        message: 'この時間帯は随時受付から通常予約へ切り替えるための移行時間です。'
+      };
+    }
+
     const reservations = readReservations_(reservationSheet);
     const current = findReservationInRows_(reservations, normalizeName_(input.name));
     const currentKey = current && current.date && current.time
@@ -190,9 +211,27 @@ function book_(input) {
       : '';
 
     const requestedKey = input.date + ' ' + input.time;
-    const booked = getBookedSlotsFromReservations_(reservations, getBookingWindow_());
+    const isFlexibleSlot = !!specialState && specialState.state === 'flexible';
 
-    if (booked.includes(requestedKey) && requestedKey !== currentKey) {
+    const requestedMode =
+      current &&
+      currentKey === requestedKey &&
+      current.mode === 'normal'
+        ? 'normal'
+        : (isFlexibleSlot ? 'flexible' : 'normal');
+
+    const collision = reservations.some(reservation => {
+      if (current && reservation.row === current.row) return false;
+      if (reservation.date !== input.date || reservation.time !== input.time) return false;
+
+      if (requestedMode === 'flexible' && reservation.mode === 'flexible') {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (collision) {
       return {
         ok: false,
         code: 'SLOT_TAKEN',
@@ -206,7 +245,8 @@ function book_(input) {
       time: input.time,
       meetingDc: input.dc || '',
       useX: !!input.useX,
-      xAccount: input.xAccount || ''
+      xAccount: input.xAccount || '',
+      mode: requestedMode
     };
 
     upsertReservation_(reservationSheet, current, savedReservation);
@@ -226,7 +266,8 @@ function book_(input) {
     return {
       ok: true,
       oldKey: currentKey,
-      bookedKey: requestedKey
+      bookedKey: requestedKey,
+      mode: requestedMode
     };
   } finally {
     lock.releaseLock();
@@ -268,9 +309,14 @@ function cancel_(name) {
 }
 
 function getBookedSlots_() {
+  const privateSs = getReservationSpreadsheet_();
+  const reservationSheet = getSheetFrom_(privateSs, CONFIG.RESERVATION_SHEET_NAME);
+  const specialReceptionSheet = getSheetFrom_(privateSs, CONFIG.SPECIAL_RECEPTION_SHEET_NAME);
+
   return getBookedSlotsFromReservations_(
-    readReservations_(getReservationSheet_()),
-    getBookingWindow_()
+    readReservations_(reservationSheet),
+    getBookingWindow_(),
+    getSpecialReceptionPeriodsFromSheet_(specialReceptionSheet)
   );
 }
 
@@ -280,7 +326,7 @@ function readReservations_(sheet) {
 
   const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
   const values = sheet
-    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, 7)
+    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, CONFIG.RES_COL_MODE)
     .getDisplayValues();
 
   const rows = [];
@@ -301,7 +347,8 @@ function readReservations_(sheet) {
         return xValue.toLowerCase() === 'true' || xValue === 'Xでやりとりを希望';
       })(),
       xAccount: String(values[i][5] || '').trim(),
-      updatedAt: String(values[i][6] || '').trim()
+      updatedAt: String(values[i][6] || '').trim(),
+      mode: String(values[i][9] || '').trim() === '随時受付' ? 'flexible' : 'normal'
     });
   }
 
@@ -315,13 +362,25 @@ function findReservationInRows_(reservations, normalizedName) {
   return null;
 }
 
-function getBookedSlotsFromReservations_(reservations, window) {
+function getBookedSlotsFromReservations_(reservations, window, specialReception) {
   const set = new Set();
   const activeWindow = window || getBookingWindow_();
+  const special = specialReception || [];
 
   reservations.forEach(reservation => {
     if (!reservation.date || !reservation.time) return;
     if (reservation.date < activeWindow.start || reservation.date > activeWindow.end) return;
+
+    const state = getSpecialReceptionStateForSlot_(
+      reservation.date,
+      reservation.time,
+      special
+    );
+
+    if (state && state.state === 'flexible' && reservation.mode === 'flexible') {
+      return;
+    }
+
     set.add(reservation.date + ' ' + reservation.time);
   });
 
@@ -420,6 +479,75 @@ function publicMaintenance_(period) {
     message: period.message || '',
     mode: period.mode || 'x_only'
   };
+}
+
+function getSpecialReceptionPeriodsFromSheet_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+  const periods = [];
+
+  values.forEach(row => {
+    if (row[0] !== true) return;
+    if (!(row[1] instanceof Date) || !(row[2] instanceof Date) || !(row[3] instanceof Date)) return;
+
+    const startMs = dateToJstPseudoMs_(row[1]);
+    const cutoffMs = dateToJstPseudoMs_(row[2]);
+    const normalStartMs = dateToJstPseudoMs_(row[3]);
+
+    if (
+      !Number.isFinite(startMs) ||
+      !Number.isFinite(cutoffMs) ||
+      !Number.isFinite(normalStartMs) ||
+      cutoffMs <= startMs ||
+      normalStartMs < cutoffMs
+    ) {
+      return;
+    }
+
+    periods.push({
+      startMs: startMs,
+      cutoffMs: cutoffMs,
+      normalStartMs: normalStartMs,
+      start: Utilities.formatDate(row[1], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
+      cutoff: Utilities.formatDate(row[2], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
+      normalStart: Utilities.formatDate(row[3], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
+      message: String(row[4] || '').trim()
+    });
+  });
+
+  periods.sort((a,b) => a.startMs - b.startMs);
+  return periods;
+}
+
+function publicSpecialReception_(period) {
+  return {
+    start: period.start,
+    cutoff: period.cutoff,
+    normalStart: period.normalStart,
+    message: period.message || ''
+  };
+}
+
+function getSpecialReceptionStateForSlot_(date, time, periods) {
+  const slotStart = slotStartPseudoMs_(date, time);
+  if (!Number.isFinite(slotStart)) return null;
+
+  const matches = [];
+
+  periods.forEach(period => {
+    if (slotStart >= period.startMs && slotStart < period.cutoffMs) {
+      matches.push({ period: period, state: 'flexible' });
+    } else if (slotStart >= period.cutoffMs && slotStart < period.normalStartMs) {
+      matches.push({ period: period, state: 'buffer' });
+    }
+  });
+
+  if (!matches.length) return null;
+
+  const buffer = matches.find(match => match.state === 'buffer');
+  return buffer || matches[0];
 }
 
 function dateToJstPseudoMs_(date) {
@@ -738,12 +866,14 @@ function upsertReservation_(sheet, existing, data) {
     updatedAt
   ]];
 
-  if (existing) {
-    sheet.getRange(existing.row, 1, 1, 7).setValues(rowValues);
-  } else {
-    const row = Math.max(sheet.getLastRow() + 1, CONFIG.RES_FIRST_DATA_ROW);
-    sheet.getRange(row, 1, 1, 7).setValues(rowValues);
-  }
+  const targetRow = existing
+    ? existing.row
+    : Math.max(sheet.getLastRow() + 1, CONFIG.RES_FIRST_DATA_ROW);
+
+  sheet.getRange(targetRow, 1, 1, 7).setValues(rowValues);
+  sheet
+    .getRange(targetRow, CONFIG.RES_COL_MODE)
+    .setValue(data.mode === 'flexible' ? '随時受付' : '通常予約');
 
   sortReservations_(sheet);
 }
