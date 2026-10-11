@@ -1649,8 +1649,6 @@ button.slot.transition-buffer{
               (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
             if(!btn.disabled){
               btn.addEventListener("click",()=>selectSlot(d,time,btn));
-            }else if(count<1){
-              btn.textContent=`${time} 受付終了`;
             }
           }else if(isTooSoonSlot(d,time)){
             btn.classList.add("past");
@@ -1680,8 +1678,6 @@ button.slot.transition-buffer{
             (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
           if(!btn.disabled){
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
-          }else if(count<1){
-            btn.textContent=`${time} 受付終了`;
           }
         }else if(isTooSoonSlot(d,time)){
           btn.classList.add("past");
