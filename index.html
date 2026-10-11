@@ -476,6 +476,13 @@ button.slot.flexible:hover{
   background:linear-gradient(180deg,rgba(52,91,122,.94),rgba(37,66,91,.96));
   border-color:rgba(149,205,244,.68);
 }
+button.slot .slot-count{
+  display:block;
+  margin-top:2px;
+  font-size:.84em;
+  font-weight:600;
+  opacity:.9;
+}
 button.slot.transition-buffer{
   background:linear-gradient(180deg,rgba(66,68,72,.78),rgba(48,50,54,.86));
   color:#aeb4bb;
@@ -1591,9 +1598,9 @@ button.slot.transition-buffer{
           }else if(specialState?.state==="flexible"){
             const count=Number(flexibleSlotCounts[key] || 0);
             btn.classList.add("flexible");
-            btn.textContent=
-              `${time} Xのみ・随時受付`+
-              (count>=2 ? `［予約人数：${count}名］` : "");
+            btn.innerHTML=
+              `<span>${time} Xのみ・随時受付</span>`+
+              (count>=2 ? `<span class="slot-count">現在${count}名予約済み</span>` : "");
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
           }else{
             btn.textContent=`${time} Xのみ`;
@@ -1606,9 +1613,9 @@ button.slot.transition-buffer{
         }else if(getSpecialReceptionState(d,time)?.state==="flexible"){
           const count=Number(flexibleSlotCounts[key] || 0);
           btn.classList.add("flexible");
-          btn.textContent=
-            `${time} 随時受付`+
-            (count>=2 ? `［予約人数：${count}名］` : "");
+          btn.innerHTML=
+            `<span>${time} 随時受付</span>`+
+            (count>=2 ? `<span class="slot-count">現在${count}名予約済み</span>` : "");
           btn.addEventListener("click",()=>selectSlot(d,time,btn));
         }else if(isBeforeReceptionStart(d,time)){
           btn.classList.add("past");
