@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.1',
+  APP_VERSION: '2026.10.12.2',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -61,6 +61,7 @@ function doGet(e) {
       result = {
         ok: true,
         booked: getBookedSlotsFromReservations_(reservations, window, specialReception),
+        flexibleCounts: getFlexibleSlotCounts_(reservations, window, specialReception),
         maintenance: maintenance.map(publicMaintenance_),
         specialReception: specialReception.map(publicSpecialReception_),
         windowStart: window.start,
@@ -385,6 +386,31 @@ function getBookedSlotsFromReservations_(reservations, window, specialReception)
   });
 
   return Array.from(set).sort();
+}
+
+function getFlexibleSlotCounts_(reservations, window, specialReception) {
+  const counts = {};
+  const activeWindow = window || getBookingWindow_();
+  const special = specialReception || [];
+
+  reservations.forEach(reservation => {
+    if (!reservation.date || !reservation.time) return;
+    if (reservation.date < activeWindow.start || reservation.date > activeWindow.end) return;
+    if (reservation.mode !== 'flexible') return;
+
+    const state = getSpecialReceptionStateForSlot_(
+      reservation.date,
+      reservation.time,
+      special
+    );
+
+    if (!state || state.state !== 'flexible') return;
+
+    const key = reservation.date + ' ' + reservation.time;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  return counts;
 }
 
 function getBookingWindow_() {
