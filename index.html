@@ -916,7 +916,7 @@ button.slot.transition-buffer{
       </div>
 
       <div id="flexibleSelectedNotice" class="flexible-selected-notice hidden">
-        <strong>この時間帯は随時受付です。</strong><br>
+        <strong id="flexibleSelectedTitle">この時間帯は随時受付です。</strong><br>
         選択した時刻は、対応開始時刻を確約する通常予約ではなく、来訪・対応希望時刻の目安です。<br>
         混雑状況によってお待ちいただく場合があります。随時受付の締切後は新規受付を停止し、通常予約の開始時刻以降は通常予約の方を優先して対応します。<br>
         また、当日の状況によっては表示されている締切時刻より前に随時受付を終了する場合があります。
@@ -1251,7 +1251,8 @@ button.slot.transition-buffer{
       '<strong>随時受付について</strong><br>'+
       '「随時受付」と表示される時間帯は、30分を1人分として確保する通常予約ではありません。選択した時刻は来訪・対応希望時刻の目安で、対応開始時刻を保証するものではありません。<br>'+
       '混雑状況によってお待ちいただく場合があります。随時受付の締切後は新規受付を止めて移行時間に入り、通常予約の開始時刻以降は通常予約の方を優先して対応します。<br>'+
-      '当日の状況によっては、表示されている締切時刻より前に随時受付を終了する場合があります。すでに確定している通常予約の時間は随時受付へ変更しません。';
+      '当日の状況によっては、表示されている締切時刻より前に随時受付を終了する場合があります。すでに確定している通常予約の時間は随時受付へ変更しません。<br>'+
+      'なお、Xのみ受付の時間帯と重なった場合は「Xのみ・随時受付」となり、Xでのやりとりが必須のまま随時受付として対応します。受付停止と重なった場合は受付停止が優先されます。';
 
     specialReceptionPeriods.forEach(period=>{
       const row=document.createElement("div");
@@ -1557,12 +1558,21 @@ button.slot.transition-buffer{
           btn.textContent=`${time} 予約済み`;
         }else if(isMaintenanceSlot(d,time)){
           const period=getMaintenanceForSlot(d,time);
+          const specialState=getSpecialReceptionState(d,time);
           btn.classList.add("maintenance");
 
           if(period && period.mode==="closed"){
             btn.classList.add("maintenance-closed");
             btn.disabled=true;
             btn.textContent=`${time} 受付停止`;
+          }else if(specialState?.state==="buffer"){
+            btn.classList.add("transition-buffer");
+            btn.disabled=true;
+            btn.textContent=`${time} 移行時間`;
+          }else if(specialState?.state==="flexible"){
+            btn.classList.add("flexible");
+            btn.textContent=`${time} Xのみ・随時受付`;
+            btn.addEventListener("click",()=>selectSlot(d,time,btn));
           }else{
             btn.textContent=`${time} Xのみ`;
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
@@ -1664,6 +1674,13 @@ button.slot.transition-buffer{
       .getElementById("flexibleSelectedNotice")
       .classList.toggle("hidden",!selectedFlexible);
 
+    if(selectedFlexible){
+      document.getElementById("flexibleSelectedTitle").textContent=
+        selectedRequiresX
+          ? "この時間帯はXのみ・随時受付です。"
+          : "この時間帯は随時受付です。";
+    }
+
     const selectedDate=parseDate(date);
     const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
     let selectedWeekdayClass="";
@@ -1673,7 +1690,9 @@ button.slot.transition-buffer{
 
     document.getElementById("selectedText").innerHTML=
       `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`+
-      (selectedFlexible ? "（随時受付）" : "");
+      (selectedFlexible
+        ? (selectedRequiresX ? "（Xのみ・随時受付）" : "（随時受付）")
+        : "");
 
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
