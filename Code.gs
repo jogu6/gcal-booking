@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.3',
+  APP_VERSION: '2026.10.12.4',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -200,7 +200,7 @@ function book_(input) {
       return {
         ok: false,
         code: 'SPECIAL_BUFFER',
-        message: 'この時間帯は随時受付から通常予約へ切り替えるための移行時間です。'
+        message: 'この時間帯は随時受付から通常予約へ切り替えるためのアディショナルタイムです。'
       };
     }
 
