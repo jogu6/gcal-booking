@@ -414,6 +414,34 @@ input:not([type="hidden"]):focus{
   margin-left:8px;
   color:#d9c6b8;
 }
+.flexible-policy-note,
+.flexible-selected-notice{
+  margin:18px 0 20px;
+  padding:15px 16px;
+  border:1px solid rgba(118,172,211,.55);
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(35,58,78,.78),rgba(26,44,60,.84));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 4px 14px rgba(0,0,0,.16);
+  color:#e9f4fc;
+  line-height:1.75;
+}
+.flexible-policy-note>strong,
+.flexible-selected-notice>strong{
+  color:#ffffff;
+}
+.flexible-period{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(146,194,229,.22);
+}
+.flexible-period-time{
+  font-weight:700;
+  color:#cdeaff;
+}
+.flexible-period-message{
+  margin-left:8px;
+  color:#d7e6f1;
+}
 button.slot.maintenance{
   background:linear-gradient(180deg,rgba(101,75,52,.82),rgba(69,51,37,.88));
   color:#f2d7bb;
@@ -429,6 +457,22 @@ button.slot.maintenance-closed{
   background:linear-gradient(180deg,rgba(82,57,57,.82),rgba(55,40,42,.90));
   color:#d8b8b8;
   border-color:rgba(177,116,116,.34);
+  cursor:default;
+}
+button.slot.flexible{
+  background:linear-gradient(180deg,rgba(43,75,101,.88),rgba(31,55,76,.92));
+  color:#d9efff;
+  border-color:rgba(124,184,227,.48);
+  font-weight:700;
+}
+button.slot.flexible:hover{
+  background:linear-gradient(180deg,rgba(52,91,122,.94),rgba(37,66,91,.96));
+  border-color:rgba(149,205,244,.68);
+}
+button.slot.transition-buffer{
+  background:linear-gradient(180deg,rgba(66,68,72,.78),rgba(48,50,54,.86));
+  color:#aeb4bb;
+  border-color:rgba(158,165,173,.25);
   cursor:default;
 }
 .prep-note{
@@ -800,6 +844,8 @@ button.slot.maintenance-closed{
       <div id="maintenanceSchedule" class="maintenance-schedule hidden"></div>
     </div>
 
+    <div id="flexibleReceptionSchedule" class="flexible-policy-note hidden"></div>
+
     <div class="prep-note">
       <strong>事前準備のおすすめ</strong><br>
       事前にスマホなら Google 認証システム(Authenticator) アプリ、PCなら Authenticator Chrome拡張機能をインストールしていただくことをお勧めします。<br>
@@ -821,7 +867,8 @@ button.slot.maintenance-closed{
     <h2>当日の流れ</h2>
     <div class="x-flow-note">
       <strong>Xでのやりとりにも対応しています。</strong><br>
-      予約時に「X でやりとりしたい場合はチェックしてください」を選択してください。
+      予約時に「X でやりとりしたい場合はチェックしてください」を選択してください。<br>
+      Xでのやりとりを希望する方は、事前にXのDM（チャット）機能が利用できることをご確認ください。当日DM（チャット）が利用できない場合は、予約をキャンセル扱いとします。
     </div>
     <div class="flow-duration-note">パーティを組んでからログイン確認まで、約30分を予定しています。</div>
     <ol>
@@ -868,6 +915,13 @@ button.slot.maintenance-closed{
         <div id="selectedText" class="chosen"></div>
       </div>
 
+      <div id="flexibleSelectedNotice" class="flexible-selected-notice hidden">
+        <strong>この時間帯は随時受付です。</strong><br>
+        選択した時刻は、対応開始時刻を確約する通常予約ではなく、来訪・対応希望時刻の目安です。<br>
+        混雑状況によってお待ちいただく場合があります。随時受付の締切後は新規受付を停止し、通常予約の開始時刻以降は通常予約の方を優先して対応します。<br>
+        また、当日の状況によっては表示されている締切時刻より前に随時受付を終了する場合があります。
+      </div>
+
       <div class="row">
         <label for="characterName">キャラクターフルネーム</label>
         <div class="name-check-row">
@@ -895,7 +949,7 @@ button.slot.maintenance-closed{
             <span class="x-check-box" aria-hidden="true"></span>
             <span>X でやりとりしたい場合はチェックしてください</span>
           </label>
-          <div class="small">X でやりとりする場合は、@og_ff14 とDM（ダイレクトメッセージ）できる状態にして、当日の予約時間にXのDMをご確認ください。</div>
+          <div class="small">X でやりとりする場合は、@og_ff14 とDM（ダイレクトメッセージ）できる状態にして、事前にDM（チャット）機能が利用できることをご確認ください。当日の予約時間にDMをご確認いただけない、またはDM（チャット）が利用できない場合はキャンセル扱いとなります。</div>
         </div>
 
         <div id="xAccountRow" class="row hidden">
@@ -928,7 +982,7 @@ button.slot.maintenance-closed{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.10.1";
+  const EXPECTED_API_VERSION = "2026.10.12.1";
 
   let START_DATE = "2026-10-11";
 
@@ -942,8 +996,10 @@ button.slot.maintenance-closed{
   const HOLIDAYS = new Set(["2026-10-12"]);
   let bookedSlots = new Set();
   let maintenancePeriods = [];
+  let specialReceptionPeriods = [];
   let selected = null;
   let selectedRequiresX = false;
+  let selectedFlexible = false;
 
   const pad2 = n => String(n).padStart(2, "0");
 
@@ -1115,6 +1171,27 @@ button.slot.maintenance-closed{
     return !!period && period.mode!=="closed";
   }
 
+  function getSpecialReceptionState(date,time){
+    const start=slotMs(date,time);
+    const matches=[];
+
+    specialReceptionPeriods.forEach(period=>{
+      const pStart=localStampMs(period.start);
+      const pCutoff=localStampMs(period.cutoff);
+      const pNormal=localStampMs(period.normalStart);
+
+      if(!Number.isFinite(pStart) || !Number.isFinite(pCutoff) || !Number.isFinite(pNormal)) return;
+
+      if(start>=pStart && start<pCutoff){
+        matches.push({period,state:"flexible"});
+      }else if(start>=pCutoff && start<pNormal){
+        matches.push({period,state:"buffer"});
+      }
+    });
+
+    return matches.find(x=>x.state==="buffer") || matches[0] || null;
+  }
+
   function displayMaintenanceStamp(value){
     const ms=localStampMs(value);
     if(!Number.isFinite(ms)) return value;
@@ -1152,6 +1229,46 @@ button.slot.maintenance-closed{
       if(period.message){
         const msg=document.createElement("span");
         msg.className="maintenance-period-message";
+        msg.textContent=period.message;
+        row.appendChild(msg);
+      }
+
+      el.appendChild(row);
+    });
+  }
+
+  function renderFlexibleReceptionSchedule(){
+    const el=document.getElementById("flexibleReceptionSchedule");
+
+    if(!specialReceptionPeriods.length){
+      el.classList.add("hidden");
+      el.innerHTML="";
+      return;
+    }
+
+    el.classList.remove("hidden");
+    el.innerHTML=
+      '<strong>随時受付について</strong><br>'+
+      '「随時受付」と表示される時間帯は、30分を1人分として確保する通常予約ではありません。選択した時刻は来訪・対応希望時刻の目安で、対応開始時刻を保証するものではありません。<br>'+
+      '混雑状況によってお待ちいただく場合があります。随時受付の締切後は新規受付を止めて移行時間に入り、通常予約の開始時刻以降は通常予約の方を優先して対応します。<br>'+
+      '当日の状況によっては、表示されている締切時刻より前に随時受付を終了する場合があります。すでに確定している通常予約の時間は随時受付へ変更しません。';
+
+    specialReceptionPeriods.forEach(period=>{
+      const row=document.createElement("div");
+      row.className="flexible-period";
+
+      const time=document.createElement("span");
+      time.className="flexible-period-time";
+      time.textContent=
+        "随時受付 "+displayMaintenanceStamp(period.start)+
+        " ～ "+displayMaintenanceStamp(period.cutoff)+
+        " / 通常予約開始 "+displayMaintenanceStamp(period.normalStart);
+
+      row.appendChild(time);
+
+      if(period.message){
+        const msg=document.createElement("span");
+        msg.className="flexible-period-message";
         msg.textContent=period.message;
         row.appendChild(msg);
       }
@@ -1374,11 +1491,13 @@ button.slot.maintenance-closed{
 
       bookedSlots=new Set(result.booked || []);
       maintenancePeriods=Array.isArray(result.maintenance) ? result.maintenance : [];
+      specialReceptionPeriods=Array.isArray(result.specialReception) ? result.specialReception : [];
       if(result.windowStart) START_DATE=result.windowStart;
       if(result.windowEnd) END_DATE=result.windowEnd;
 
       updateBookingPeriodText();
       renderMaintenanceSchedule();
+      renderFlexibleReceptionSchedule();
       renderCalendar();
 
       loading.classList.add("hidden");
@@ -1393,7 +1512,9 @@ button.slot.maintenance-closed{
 
       bookedSlots=new Set();
       maintenancePeriods=[];
+      specialReceptionPeriods=[];
       renderMaintenanceSchedule();
+      renderFlexibleReceptionSchedule();
       document.getElementById("calendar").innerHTML="";
       loading.classList.remove("hidden");
       loading.textContent=err.message || "予約状況を取得できません。再読み込みしてください。";
@@ -1446,6 +1567,14 @@ button.slot.maintenance-closed{
             btn.textContent=`${time} Xのみ`;
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
           }
+        }else if(getSpecialReceptionState(d,time)?.state==="buffer"){
+          btn.classList.add("transition-buffer");
+          btn.disabled=true;
+          btn.textContent=`${time} 移行時間`;
+        }else if(getSpecialReceptionState(d,time)?.state==="flexible"){
+          btn.classList.add("flexible");
+          btn.textContent=`${time} 随時受付`;
+          btn.addEventListener("click",()=>selectSlot(d,time,btn));
         }else if(isBeforeReceptionStart(d,time)){
           btn.classList.add("past");
           btn.disabled=true;
@@ -1530,6 +1659,10 @@ button.slot.maintenance-closed{
     button.classList.add("selected");
     selected={date,time};
     selectedRequiresX=isMaintenanceXOnlySlot(date,time);
+    selectedFlexible=getSpecialReceptionState(date,time)?.state==="flexible";
+    document
+      .getElementById("flexibleSelectedNotice")
+      .classList.toggle("hidden",!selectedFlexible);
 
     const selectedDate=parseDate(date);
     const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
@@ -1539,7 +1672,8 @@ button.slot.maintenance-closed{
     if(HOLIDAYS.has(date)) selectedWeekdayClass=" holiday";
 
     document.getElementById("selectedText").innerHTML=
-      `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`;
+      `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`+
+      (selectedFlexible ? "（随時受付）" : "");
 
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
@@ -1785,10 +1919,12 @@ button.slot.maintenance-closed{
       const bookedWithX=useX.checked;
       const bookedKey=result.bookedKey || `${selected.date} ${selected.time}`;
       if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
-      bookedSlots.add(bookedKey);
+      if(result.mode==="normal") bookedSlots.add(bookedKey);
       renderCalendar();
       selected=null;
       selectedRequiresX=false;
+      selectedFlexible=false;
+      document.getElementById("flexibleSelectedNotice").classList.add("hidden");
       verifiedMember=false;
       verifiedMemberName="";
       document.getElementById("characterName").value="";
@@ -1816,8 +1952,20 @@ button.slot.maintenance-closed{
         if(maintenanceKey) scrollToSlot(maintenanceKey);
         selected=null;
         selectedRequiresX=false;
+        selectedFlexible=false;
+        document.getElementById("flexibleSelectedNotice").classList.add("hidden");
         document.getElementById("formCard").classList.add("hidden");
         showGlobalNotice("その時間帯は受付停止になりました。別の時刻を選択してください。","error");
+      }else if(err.code==="SPECIAL_BUFFER"){
+        const transitionKey=selected ? `${selected.date} ${selected.time}` : null;
+        await loadSlots();
+        if(transitionKey) scrollToSlot(transitionKey);
+        selected=null;
+        selectedRequiresX=false;
+        selectedFlexible=false;
+        document.getElementById("flexibleSelectedNotice").classList.add("hidden");
+        document.getElementById("formCard").classList.add("hidden");
+        showGlobalNotice("その時間帯は通常予約へ切り替えるための移行時間です。別の時刻を選択してください。","error");
       }else{
         showMessage(message,"error");
       }
