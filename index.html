@@ -1639,13 +1639,14 @@ button.slot.transition-buffer{
             btn.textContent=`${time} 受付開始前`;
           }else if(specialState?.state==="flexible"){
             const count=Number(flexibleSlotCounts[key] || 0);
+            const closed=isTooSoonSlot(d,time);
             btn.classList.add("flexible");
-            if(isTooSoonSlot(d,time)){
+            if(closed){
               btn.classList.add("past");
               btn.disabled=true;
             }
             btn.innerHTML=
-              `<span>${time} Xのみ・随時受付</span>`+
+              `<span>${time} ${closed ? '受付終了' : 'Xのみ・随時受付'}</span>`+
               (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
             if(!btn.disabled){
               btn.addEventListener("click",()=>selectSlot(d,time,btn));
@@ -1668,13 +1669,14 @@ button.slot.transition-buffer{
           btn.textContent=`${time} 受付開始前`;
         }else if(getSpecialReceptionState(d,time)?.state==="flexible"){
           const count=Number(flexibleSlotCounts[key] || 0);
+          const closed=isTooSoonSlot(d,time);
           btn.classList.add("flexible");
-          if(isTooSoonSlot(d,time)){
+          if(closed){
             btn.classList.add("past");
             btn.disabled=true;
           }
           btn.innerHTML=
-            `<span>${time} 随時受付</span>`+
+            `<span>${time} ${closed ? '受付終了' : '随時受付'}</span>`+
             (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
           if(!btn.disabled){
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
