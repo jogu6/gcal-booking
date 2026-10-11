@@ -1600,7 +1600,7 @@ button.slot.transition-buffer{
             btn.classList.add("flexible");
             btn.innerHTML=
               `<span>${time} Xのみ・随時受付</span>`+
-              (count>=2 ? `<span class="slot-count">${count}名予約済み</span>` : "");
+              (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
           }else{
             btn.textContent=`${time} Xのみ`;
@@ -1615,7 +1615,7 @@ button.slot.transition-buffer{
           btn.classList.add("flexible");
           btn.innerHTML=
             `<span>${time} 随時受付</span>`+
-            (count>=2 ? `<span class="slot-count">${count}名予約済み</span>` : "");
+            (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
           btn.addEventListener("click",()=>selectSlot(d,time,btn));
         }else if(isBeforeReceptionStart(d,time)){
           btn.classList.add("past");
