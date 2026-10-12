@@ -744,6 +744,128 @@ button.slot.transition-buffer{
 @media(max-width:520px){
   .dc-choice-grid{grid-template-columns:1fr}
 }
+.support-guide{
+  margin:0 0 18px;
+  padding:15px;
+  border:1px solid rgba(143,185,221,.34);
+  border-radius:10px;
+  background:linear-gradient(180deg,rgba(29,45,61,.86),rgba(22,34,47,.90));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 5px 18px rgba(0,0,0,.18);
+}
+.support-guide-title{font-weight:800;color:#f3f8fc;margin-bottom:8px}
+.support-guide-text{color:#d9e6f0;line-height:1.7}
+.support-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 14px;
+  margin:12px 0 0;
+}
+.support-legend-item,.support-method-card{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.support-icon{
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 7px rgba(0,0,0,.24);
+  overflow:hidden;
+  background:#111b27;
+}
+.support-icon-game{
+  position:relative;
+  background:radial-gradient(circle at 50% 35%,#6fd6ff 0 14%,#1b72a9 15% 30%,#102b48 31% 100%);
+}
+.support-icon-game::before{
+  content:"";
+  width:9px;
+  height:19px;
+  background:linear-gradient(180deg,#d7f7ff,#58c8ff 48%,#1586c5 49%,#9ceaff);
+  clip-path:polygon(50% 0,100% 42%,70% 100%,30% 100%,0 42%);
+  filter:drop-shadow(0 0 3px rgba(124,222,255,.8));
+}
+.support-icon-x{
+  background:#050505;
+  color:#fff;
+  font-family:Arial,sans-serif;
+  font-weight:700;
+  font-size:21px;
+}
+.support-icon-companion img{width:100%;height:100%;object-fit:cover}
+.support-icons{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:5px;
+  margin-top:5px;
+  min-height:26px;
+}
+button.slot .support-icon{
+  width:24px;height:24px;flex-basis:24px;border-radius:7px;
+}
+button.slot .support-icon-x{font-size:18px}
+.support-method-panel{
+  margin:18px 0;
+  padding:15px;
+  border:1px solid rgba(157,190,219,.32);
+  border-radius:10px;
+  background:linear-gradient(180deg,rgba(28,43,58,.88),rgba(20,32,44,.92));
+}
+.support-method-label{font-weight:800;margin-bottom:10px;color:#f2f7fb}
+.support-method-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.support-method-card{
+  min-height:64px;
+  padding:10px 12px;
+  border:1px solid rgba(190,207,224,.30);
+  border-radius:9px;
+  background:linear-gradient(180deg,#202c39,#17212c);
+  color:#e9f0f6;
+  cursor:pointer;
+  text-align:left;
+  font-weight:700;
+}
+.support-method-card:hover:not(:disabled){
+  border-color:rgba(156,199,239,.58);
+  background:linear-gradient(180deg,#29394b,#1c2937);
+}
+.support-method-card.selected{
+  border-color:rgba(235,204,132,.76);
+  background:linear-gradient(180deg,rgba(171,139,73,.36),rgba(91,70,36,.40));
+  color:#fff4d2;
+  box-shadow:0 0 0 2px rgba(221,184,96,.13);
+}
+.support-method-card:disabled{
+  opacity:.36;
+  cursor:not-allowed;
+  filter:grayscale(.6);
+}
+.support-method-description{
+  margin-top:11px;
+  color:#cbdbe7;
+  font-size:13px;
+  line-height:1.55;
+}
+.support-detail-note{
+  margin:12px 0 0;
+  padding:11px 12px;
+  border-radius:8px;
+  background:rgba(102,139,172,.10);
+  color:#d9e8f4;
+  line-height:1.6;
+}
+@media(max-width:620px){
+  .support-method-grid{grid-template-columns:1fr}
+}
 .cancel-card{
   background:linear-gradient(180deg,rgba(77,52,59,.84),rgba(49,35,40,.88));
   border-color:rgba(222,164,164,.36);
@@ -937,25 +1059,35 @@ button.slot.transition-buffer{
       </div>
     </div>
 
-    <h2>当日の流れ</h2>
-    <div class="x-flow-note">
-      <strong>Xでのやりとりにも対応しています。</strong><br>
-      予約時に「X でやりとりしたい場合はチェックしてください」を選択してください。<br>
-      Xでのやりとりを希望する方は、事前にXのDM（チャット）機能が利用できることをご確認ください。当日DM（チャット）が利用できない場合は、予約をキャンセル扱いとします。
+    <h2>招待・登録サポート方法</h2>
+    <div class="support-guide">
+      <div class="support-guide-title">予約時間ごとに、利用できるサポート方法をアイコンで表示します。</div>
+      <div class="support-guide-text">
+        <strong>ゲーム内</strong>ではFF14内でパーティを組み、招待URLをお送りします。<br>
+        <strong>X</strong>ではDMで招待・登録をサポートします。事前に @og_ff14 とDMできる状態をご確認ください。<br>
+        <strong>コンパニオンアプリ</strong>では、リーダーを含む3者専用チャットルームを作成し、その中で招待・登録をサポートします。<br>
+        FF14メンテナンス中はゲーム内対応、コンパニオンアプリのメンテナンス中はコンパニオン対応が利用できません。両方が重なる場合はXのみ利用できます。
+      </div>
+      <div class="support-legend">
+        <div class="support-legend-item"><span class="support-icon support-icon-game" aria-hidden="true"></span><span>ゲーム内</span></div>
+        <div class="support-legend-item"><span class="support-icon support-icon-x" aria-hidden="true">𝕏</span><span>X</span></div>
+        <div class="support-legend-item"><span class="support-icon support-icon-companion" aria-hidden="true"><img alt="" src="data:image/png;base64,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"></span><span>コンパニオンアプリ</span></div>
+      </div>
     </div>
-    <div class="flow-duration-note">パーティを組んでからログイン確認まで、約30分を予定しています。</div>
+
+    <h2>当日の流れ</h2>
+    <div class="flow-duration-note">ゲーム内対応では、パーティを組んでからログイン確認まで約30分を予定しています。</div>
     <ol>
-      <li>予約した時刻になりましたらFF14へログインしてください。</li>
-      <li>ゲーム内で1対1のパーティを組みます。</li>
-      <li>パーティチャットで招待URLをお送りします。</li>
-      <li>招待URLへアクセスしてください。</li>
-      <li>ワンタイムパスワードを登録します。</li>
-      <li>正常にログインできるところまでサポートします。</li>
+      <li>予約時に、その時間帯で利用可能なサポート方法を選択します。</li>
+      <li>ゲーム内対応の場合は予約時刻にFF14へログインしてください。</li>
+      <li>X対応の場合は予約時刻にDMをご確認ください。</li>
+      <li>コンパニオンアプリ対応の場合は、3者専用チャットルームでご案内します。</li>
+      <li>招待URLから登録し、正常にログインできるところまでサポートします。</li>
     </ol>
 
     <div class="notice">
-      <strong>10月11日・12日：</strong>予約時に集合希望DCを指定してください。<br>
-      <strong>10月13日以降：</strong>集合希望DCの指定は不要です。
+      <strong>ゲーム内対応：</strong>10月11日・12日は集合希望DCを指定してください。10月12日の18:30枠までは集合希望ワールドも必須です。<br>
+      <strong>X・コンパニオンアプリ対応：</strong>集合DC・ワールドの指定は不要です。
     </div>
 
     <p class="small">予約済みの枠には時間帯だけ「予約済み」と表示します。予約者のキャラクター名やDCなどは他の方には表示されません。</p>
@@ -976,6 +1108,11 @@ button.slot.transition-buffer{
 
   <section class="card">
     <h2>希望日時を選択</h2>
+    <div class="support-legend" aria-label="受付可能なサポート方法">
+      <div class="support-legend-item"><span class="support-icon support-icon-game" aria-hidden="true"></span><span>ゲーム内</span></div>
+      <div class="support-legend-item"><span class="support-icon support-icon-x" aria-hidden="true">𝕏</span><span>X</span></div>
+      <div class="support-legend-item"><span class="support-icon support-icon-companion" aria-hidden="true"><img alt="" src="data:image/png;base64,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"></span><span>コンパニオン</span></div>
+    </div>
     <div id="loading" class="loading">予約状況を読み込んでいます…</div>
     <div id="calendar"></div>
   </section>
@@ -1027,20 +1164,28 @@ button.slot.transition-buffer{
         <div class="small">ホームワールドを初期値として表示します。必要に応じて変更してください。</div>
       </div>
 
-      <div id="xContactPanel" class="x-contact-panel hidden">
-        <div id="xPreferenceRow" class="row">
-          <label class="x-check-label" for="useX">
-            <input id="useX" class="x-check" type="checkbox">
-            <span class="x-check-box" aria-hidden="true"></span>
-            <span>X でやりとりしたい場合はチェックしてください</span>
-          </label>
-          <div class="small">X でやりとりする場合は、@og_ff14 とDM（ダイレクトメッセージ）できる状態にして、事前にDM（チャット）機能が利用できることをご確認ください。当日の予約時間にDMをご確認いただけない、またはDM（チャット）が利用できない場合はキャンセル扱いとなります。</div>
+      <div id="supportMethodPanel" class="support-method-panel hidden">
+        <div class="support-method-label">招待・登録サポート方法</div>
+        <div class="support-method-grid" role="radiogroup" aria-label="招待・登録サポート方法">
+          <button type="button" class="support-method-card" data-method="game" role="radio" aria-checked="false">
+            <span class="support-icon support-icon-game" aria-hidden="true"></span><span>ゲーム内</span>
+          </button>
+          <button type="button" class="support-method-card" data-method="x" role="radio" aria-checked="false">
+            <span class="support-icon support-icon-x" aria-hidden="true">𝕏</span><span>X</span>
+          </button>
+          <button type="button" class="support-method-card" data-method="companion" role="radio" aria-checked="false">
+            <span class="support-icon support-icon-companion" aria-hidden="true"><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAPMElEQVR42tWZaYxd51nHf+97zt2X2WzPeDZ7vC94iWsnTpw6pEmTQBMlDpBQswhavkBBqhCobaBSpLYIhCgSKiJ8QJWCEC1VSYIbnMZ1mhJCXOJsduN4y3gZj2c827137tz9nvfhwzn33HM847iJ2g8cae4y95z3ffb//3leBQhLXEpZiDgA2JE0PQO3s2L4bjqXbyOe6sWOZbCsJHY0hdY2gqDcJ0EEAZRqf/Z+QcTgOBWcRhnHqVOvzFKYPcXs+DEmRg9TK08F9jc3Eq8t51J3KKURMUSiWUa2f4bhLQfpWLYJy0q4i4ogGMQ4iBiUUihAKRAUIgbxVlVaI8Z46yp/faW1d49CaxsjDgu584yffYYLP3mahdy5ljD4i91cAdUyE4PrD7D1zifpXLEd4zRwnCqIA6JQWiFG0FqjNTQdQ6MpNB2IRhRRW6OVomnM0nsLoGSR9bQVw7LjVEtTnD3+d5z+8V8i4vgGvYkCCqVc623d9yRb7/hzxDg0GyVQCqV06Anb0pQqVXLFEsrM0BGbJRkpM1fupOL0EI0tY1lnEq00juN6SYLyEzZwK7xEDNqKYsfSXDnzLK8f/iz16hwoDUso4SvQivlt+/+CLbd/iWa94C6sNIKA4CkoWBqmcgXi5hQPbnmVX1x/mhXZeRJ2nUI1wejsMg6d3M2xsX10dAyTiMcwRvwQEhFfAQm8ohQKdw+RJtF4N1OX/4tXnzlAvZoLPRFSoOWijXv+mJ2f+Bvq1RxKWf6G7mOuEpalmJyeZnP3yzzxwLOs6r0GxgajQRQoA5Ybakd+spW/PvoYVmoHmUQCx1OitVYrL8SLs9Znd1/BmAaxRA+XTn2bY4cOesqHvWAppZ8UMSzrv4NbP/VNjFPxBFGL3GVbipl8kTXZl/nbX/1nVnQUaVRjYCwwGgGMozFNG2Ms1g+Ns6l7jMMnVxGJLcfWGjFuAKlWyom6YVBrZdNslOnp3021dI25ide9UG57QYsI2oryC/u/gmXFMMbxYr5VBvHCB+pNB6md44v3PkcmVaFZj2JbglaCUoIS993SgkZolFLs2XiWg7cc5trsLJZWXpi08sAtGkFPKwJe97zhNCts3vslEpkh1wOtfAQ0CCvX/DIrhu6i2Siite25knYtV4KlFXOFCneteZ0Ng+M0qzEsba6vv6Hk1Mog9Ri/tutNumPnKdUctB8m7dAUwvnRcoT7omnWK6SyQ6zd8XuLlNQAw5s/7YeMm0DSMgHi1wxFvTbPvjWnERW2kgRrZWAdrQTj2HR2FNjWd475ch2tfcBYtNcNwUlpms0qA+sfwY5mPIB199HJ7GqWDdyGcWotfcLx6KWDIxC1ivRlCyijUaqdeGqJfAlZVAsD2Skcp+GGJoDWKK90K9QSaOqtrRVaaYypkeleT1fvLT4YAujulR8jllyBcRqhjd3dlW8KEbB0E1s3PxDaZZFX3DUiVh0lgognbKv4e0/5+eaWRd9DrQAQY7DsBF19u0L76Wz3ZpSK+JTgOuLiW9FSQqWRYaaURZTxmY+ILOW0Rde14jKUjvq2blES1/peKW0FgJGA4Yynq+u6bPfmsALJ7LBXcbyYV4vhUgS0UtjRTo5fXovS4Tq+RPz4/9fa0KjGOTezimQigpGWYVQAxDxzyPVWCJRcBHEMiXR/AA8UOp7q8xNVAsnUiu3Wn2OErkyKF8/sZXKqGzvawDFuugW9IIHkdoyFjtd45ew6RgtbySYjGK80Kk808cp0y8rBPUF71ci9W0yTSKwTrSP+Tjoa73DZYgDeVSiOXRAwCImoxYJs5Osv3e+GlWVwjNXmSaFcsLCjdXL5LP/w6qfIpnvbUamUl14BduR9F49+i4hb7pVLHFsesSMptBULEEAr4SmovLrfcqhqUXv3RQRHhL7uDl4du5+vPf8QdQN2vOLCvmiMKEQURhRWpM70fJovPPPrTDd205GO0wzQ6ohlo7XG0hrbtttUO5BD0soF3cpNwbLjKG37lrb9LwTLsdBysiAoAcu2UdqF8eGBIY5cfJyL3xrgd247wq2rLhKNVUEJOBqwmMqn+fKhxziVu5/B5RkajgGlXBZbLjGXn0arOiKCHUmzvLsXhfaMJiEOplB+biodCXncDpOpdtkLlUElzMzNUKksoLRbCpOJFGdyd/HEf+5kuHOU/sxlMrEyY7nl7Oi/SHdsjtlSmmzKwjHKW9twZeIyHal5Hr23izt3DSEC//bCGMffvUBf7zqMMeGiLCqQo4K2bJS22gr4We7e20ZE1SpxhunZi2xd0+TW7V3E4zaF+RoXxuc5d7HO5Kzm/Nw2Jqp3EIlEKVVq5MtHObDlFXoSMxQqDaLZKKXSPBPXRvmlj6f5/YO30NsT94XYu3MZv/vEca7O5Ojs6MZxHB+BW+J7iRGiEa4CyosxtRjCLctmJjfNlrUO3/jyLrQOP5wv1vnfd2Z57ugEJ87OQbSDerWOow2iND2pEsfHJ6lWFmg0cnzu4Ep++5ERABzH5UOOI0Qimrtv6+Gpbxfo7uzBBCgJWrsAGMjTsAIBMJIQP3c1qtUq7N3RjdaKetNg27rlIDozUe67cyX33dnHv784xjun59kwkmHr6v2s7vs4+yuaPWeEE2fm2b5xFQc+OeA2Nrh9BYBoV6ihviSWLmCM8SHIbXyEdjVZzPLtRc2FCcafoJVmvthwqQQg+TxYFiqTcfm/cZnqo/cN8+h94cU7gcFhOPDJACB6XjTFImZ8AmNHsNaN0NUZxbLASBCpVahjUyzu7+2gVn7i+oRdYdkxLo3n3fJaKsNbJ8DSOMkkeu0IVlcXiLgI26LKgTWN10u0KZuiOT4O597HajpIMgXrRsjlGxjjDgMcD2V9JFbqOuYaoBJKAtU3iCtKYcSQTqV570KNXLGJnYwiloWNQuXySLnSXkgrtAJLK7Ruo6mlFVqpkOvFMWjHQCSC8X6YnqvQdDTastporFVA4DBTaPcDrbor4emKCBjHkEzEmZuPcOytKYhEMckkplJB1q1BD/R7HEDxU13eCCIyPISzZjVOuYxKJAC4OlXDtqL+DEnawxLvc7vxDxYiLabdRPvkzPNAK+YS8S6+/4o7MbNWrMAM9mONrEZ9GOFDSoA9shozOIDqTAPw7rkFEsl0oBVTPuNWSkFLzuuMbbfGhy3NJEChlVIYY+js6OKt09c4e3GeDasHMDIQIFkf4fKMaG3dgqXh4vgCF68aMtkkjmPa6NsmrohWblJLM8ChQBunHhxttZmg3/IZIhGbhpPhpWNTS/YAH/nyYvvNd3OUqlFi0ahXfQLNjLT5kdJgTB0x7abKdprlAKcXggyiPbHTaK3IpCL8TC9vj2zaxtLiUu1QgAeTWLwGv4wxDf//ulHLBUIh0N9KuLUyTp2OTPTnIT8dmRhaCWJCBHvJiXmzXsA0q20dKwsTS88dA7xCvGRtNAw/j6tWb7oFsWW8EC6J3ycobVErT3vtr8uMdTH3vlu6QhMvCfNrERQRJmfK/sLGCB81FURcBG+h7kyuRtNR7fOEIJ2WtkZKwUL+Qsh/dmHqBI5Tcef1jvHLmD+W9/AtGk1w4cq8N2LUobnQDXvjRYKL15+4wnoNI6NjZbQVbWfsdYxTKZcqG8chN/V2GMjy0+9QmR9D6+h1kdfKB/e9I9vB6FidesMwM1vk7ZOXKJVrftW6WWVqlWWtFJVqnZPvjjE+4U6cT1+okM10uQcfgTxUAVzSVoTKwiSzV4+FosSuV3NMXvwBm5Zvpdko+Yv4ltWaYnGOuXwOMTUmZ+tYpsb3j7zFd58ts27NSj5x1zaGBpfdBL8Uk9fyvPTyCU6fu0osFuGxR2+nWMpy/nKVYmkSx6mQTXe7oRVqZx3sSIbps89Rnr/sn2OASzCfrJTGGdr0abS2Q4ittaZcXiAVm+DxBzJkMxFu29HJ4MoO9u3dSN+KLt47c4XvvfAGjmPYsL7/hgq89KOT/NPTR9GWxYMPfIwDD+1l+bIslZrD5YkS9+xNMj07S6EUIx5PeFPsYDxo3vnRFyjlR1HKantAKU1h6iTn3/x7tu77M2rlWbR2AcXSCsdxSMUNv/HwauJRy08spRRbNg+xZfMQ/3PsNE//68vMzs1z8PG7sC3tFzER+O5zxzjy0js89ugd3Hv39lBYdWYifO3zWwA4cabA5FzDC8tW/XAPOsbPHWLq0lGPYjjtpgvFkyjN3MTr9K66l3TnGpqNMkpZGBFisRhTcw7feeEcxhjWrUoTiehQ3zw8tJzhoWX892un2bFtNalUHOPFe6lc4/nDx/mVR+5g/74tHrq3c6zeMDx39Cpf/Popxqc76OpYjjHGVcA4aDtOo5rj2PO/Ra08teh8IHRCk+3exP7HDpPIDNKsFVA6gtaaWm2BeuUC6RT86Wc3sGdbt0+hgwlaqzWIxiJIYR7n8hh6sB+rq4tarUEsFgmcvrQr0pnRIl996jQzc03s6DDJZBfGOIg4aCuCZcV57T8OMnbmO0se9i06I+vs3cntD32LTPcGGrUcth1l7Mr7/NFvZjn44EgbmUXQavFhhNTrNI+/iVVcwMmksPfsRkXCwuN1csEe+3s/vMJXn7rG8NBGmo06ViSJAo6/+AdcOPnN0Ln1DY9ZWzcls8Psuf8f6Rt5AGNqzBcmiEcm2bkpS1fWZu8tPdy2vcetFj71djmkyeeQN97GjscxjoPatRPSafd3b8omuI3PqfMFjr52jXyxyYkzRebLy8l29GHZSRbyo7x55A+ZGD18Q+GXPkvw3KSUxbpdn2Pj7s+T6hyhWi1RLBaoVktopvmTzwzw8D3D3hIGx/FoeLOB88bb6HwBk81i7d6FitjelEP5ZxCvvD7BV566yEKli3giRTrVRSqZplqe4dKpf+G9H/8V1YWJDxT+pif1AIl0P/3rH2Zww8N09+4gnuihVneYy1/mzl0xHr6nj+0bYkSt6xYZn4T+3lDPYID3Rpsc+uEkP3htgUx6mGQiRrUyx/zcOa6cPcTV9w8xP/PuIjk+lAJBGh3UPpkdJt25lkzXWuKpPooVB8s2jAym2bw2zVBvguU9MWzb8g4p3JH4TL7G+GSF0xcWOH+pRLUqZFNRGtVpirkLLOTPUy5c8mly+2xafipGKzdrARX6A934M6PXHkDdzOofToEluNF1LVX7SJalGWpr5trGgOs7gsAo/yP0FML/4+v/AK1h0B6DYDefAAAAAElFTkSuQmCC"></span><span>コンパニオンアプリ</span>
+          </button>
         </div>
-
-        <div id="xAccountRow" class="row hidden">
+        <div id="supportMethodDescription" class="support-method-description"></div>
+        <input type="hidden" id="supportMethod" value="">
+        <div id="xAccountRow" class="row hidden" style="margin-top:14px">
           <label for="xAccount">X アカウント名</label>
           <input id="xAccount" maxlength="16" autocomplete="off" placeholder="@og_ff14 等">
-          <div class="small">半角英数字と「_」のみ。@は付けても付けなくても構いません。</div>
+          <div class="small">半角英数字と「_」のみ。@は付けても付けなくても構いません。事前に @og_ff14 とDMできる状態をご確認ください。</div>
+        </div>
+        <div id="companionSupportNote" class="support-detail-note hidden">
+          リーダーを含む3者専用チャットルームを作成し、その中で招待URLの送付と登録サポートを行います。
         </div>
       </div>
 
@@ -1067,7 +1212,7 @@ button.slot.transition-buffer{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.14";
+  const EXPECTED_API_VERSION = "2026.10.12.15";
 
   let START_DATE = "2026-10-11";
 
@@ -1086,6 +1231,7 @@ button.slot.transition-buffer{
   let selected = null;
   let selectedRequiresX = false;
   let selectedFlexible = false;
+  let selectedSupportMethods = [];
 
   const pad2 = n => String(n).padStart(2, "0");
 
@@ -1236,25 +1382,57 @@ button.slot.transition-buffer{
     return Date.UTC(y,m-1,d,hh,mm);
   }
 
-  function getMaintenanceForSlot(date,time){
+  function getMaintenanceMatchesForSlot(date,time){
     const start=slotMs(date,time);
     const end=start+30*60*1000;
-    const matches=maintenancePeriods.filter(period=>{
+    return maintenancePeriods.filter(period=>{
       const pStart=localStampMs(period.start);
       const pEnd=localStampMs(period.end);
       return Number.isFinite(pStart) && Number.isFinite(pEnd) && start<pEnd && end>pStart;
     });
-    if(!matches.length) return null;
-    return matches.find(period=>period.mode==="closed") || matches[0];
+  }
+
+  function getMaintenanceState(date,time){
+    const matches=getMaintenanceMatchesForSlot(date,time);
+    return {
+      matches,
+      closed:matches.some(period=>period.service==="closed"),
+      ff14:matches.some(period=>period.service==="ff14"),
+      companion:matches.some(period=>period.service==="companion")
+    };
+  }
+
+  function getMaintenanceForSlot(date,time){
+    const state=getMaintenanceState(date,time);
+    if(!state.matches.length) return null;
+    return state.matches.find(period=>period.service==="closed") || state.matches[0];
   }
 
   function isMaintenanceSlot(date,time){
-    return !!getMaintenanceForSlot(date,time);
+    return getMaintenanceState(date,time).matches.length>0;
+  }
+
+  function getSupportedMethodsForSlot(date,time){
+    const state=getMaintenanceState(date,time);
+    if(state.closed) return [];
+    const methods=[];
+    if(!state.ff14) methods.push("game");
+    methods.push("x");
+    if(!state.companion) methods.push("companion");
+    return methods;
   }
 
   function isMaintenanceXOnlySlot(date,time){
-    const period=getMaintenanceForSlot(date,time);
-    return !!period && period.mode!=="closed";
+    const methods=getSupportedMethodsForSlot(date,time);
+    return methods.length===1 && methods[0]==="x";
+  }
+
+  function supportIconsHtml(methods){
+    return '<span class="support-icons">'+methods.map(method=>{
+      if(method==="game") return '<span class="support-icon support-icon-game" title="ゲーム内対応" aria-label="ゲーム内対応"></span>';
+      if(method==="x") return '<span class="support-icon support-icon-x" title="X対応" aria-label="X対応">𝕏</span>';
+      return '<span class="support-icon support-icon-companion" title="コンパニオンアプリ対応" aria-label="コンパニオンアプリ対応"><img alt="" src="data:image/png;base64,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"></span>';
+    }).join("")+'</span>';
   }
 
   function getSpecialReceptionState(date,time){
@@ -1413,16 +1591,17 @@ button.slot.transition-buffer{
     const nameInput=document.getElementById("characterName");
     const name=nameInput.value;
     const dcRow=document.getElementById("dcRow");
-    const dc=document.getElementById("dc");
 
     verifiedMember=false;
     verifiedMemberName="";
     dcRow.classList.add("hidden");
     worldRow.classList.add("hidden");
-    xContactPanel.classList.add("hidden");
+    supportMethodPanel.classList.add("hidden");
     xAccountRow.classList.add("hidden");
-    
+    companionSupportNote.classList.add("hidden");
+
     setDcValue("");
+    setSupportMethod("");
 
     if(!validName(name)){
       showMessage("キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。","error");
@@ -1452,39 +1631,23 @@ button.slot.transition-buffer{
 
       verifiedMember=true;
       verifiedMemberName=normalizeName(name);
-      if(result.canCancel){
-        setXEnabled(!!result.useX,result.xAccount || "");
-      }
-      if(selectedRequiresX){
-        setXEnabled(true,result.xAccount || "");
-      }
-      xContactPanel.classList.remove("hidden");
-      xAccountRow.classList.toggle("hidden",!useX.checked);
+      supportMethodPanel.classList.remove("hidden");
 
-      const needsDc=
-        !selectedRequiresX &&
-        (selected.date==="2026-10-11" || selected.date==="2026-10-12");
-      const needsWorld=
-        needsDc &&
-        selected.date==="2026-10-12" &&
-        selected.time<="18:30" &&
-        !useX.checked;
-      if(needsDc){
-        dcRow.classList.remove("hidden");
+      worldInput.dataset.homeWorld=result.world || "";
+      const initialDc=result.meetingDc || result.dc || "";
+      const initialWorld=
+        result.meetingWorld ||
+        (initialDc===result.dc ? (result.world || "") : "");
+      setDcValue(initialDc,initialWorld);
 
-        const initialDc=result.meetingDc || result.dc || "";
-        const initialWorld=
-          result.meetingWorld ||
-          (initialDc===result.dc ? (result.world || "") : "");
-        worldInput.dataset.homeWorld=result.world || "";
-        setDcValue(initialDc,initialWorld);
-
-        worldRow.classList.toggle("hidden",!needsWorld);
-      }else{
-        dcRow.classList.add("hidden");
-        worldRow.classList.add("hidden");
-        setDcValue("");
+      let initialMethod=result.canCancel ? (result.supportMethod || "") : "";
+      if(!selectedSupportMethods.includes(initialMethod)){
+        initialMethod=selectedSupportMethods.includes("game")
+          ? "game"
+          : (selectedSupportMethods.includes("x") ? "x" : selectedSupportMethods[0] || "");
       }
+
+      setSupportMethod(initialMethod,result.contact || result.xAccount || "");
 
       const message=document.getElementById("message");
       message.className="";
@@ -1506,9 +1669,9 @@ button.slot.transition-buffer{
       verifiedMemberName="";
       document.getElementById("dcRow").classList.add("hidden");
       worldRow.classList.add("hidden");
-      xContactPanel.classList.add("hidden");
+      supportMethodPanel.classList.add("hidden");
       setDcValue("");
-      setXEnabled(false);
+      setSupportMethod("");
     }
   });
 
@@ -1665,50 +1828,19 @@ button.slot.transition-buffer{
         btn.className="slot";
         btn.dataset.slotKey=key;
 
+        const specialState=getSpecialReceptionState(d,time);
+        const supported=getSupportedMethodsForSlot(d,time);
+        const maintenanceState=getMaintenanceState(d,time);
+
         if(bookedSlots.has(key)){
           btn.classList.add("booked");
           btn.disabled=true;
           btn.textContent=`${time} 予約済み`;
-        }else if(isMaintenanceSlot(d,time)){
-          const period=getMaintenanceForSlot(d,time);
-          const specialState=getSpecialReceptionState(d,time);
-          btn.classList.add("maintenance");
-
-          if(period && period.mode==="closed"){
-            btn.classList.add("maintenance-closed");
-            btn.disabled=true;
-            btn.textContent=`${time} 受付停止`;
-          }else if(specialState?.state==="buffer"){
-            btn.classList.add("transition-buffer");
-            btn.disabled=true;
-            btn.textContent=`${time} アディショナルタイム`;
-          }else if(isBeforeReceptionStart(d,time)){
-            btn.classList.add("past");
-            btn.disabled=true;
-            btn.textContent=`${time} 受付開始前`;
-          }else if(specialState?.state==="flexible"){
-            const count=Number(flexibleSlotCounts[key] || 0);
-            const closed=isTooSoonSlot(d,time);
-            btn.classList.add("flexible");
-            if(closed){
-              btn.classList.add("past");
-              btn.disabled=true;
-            }
-            btn.innerHTML=
-              `<span>${time} ${closed ? '受付終了' : 'Xのみ・随時受付'}</span>`+
-              (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
-            if(!btn.disabled){
-              btn.addEventListener("click",()=>selectSlot(d,time,btn));
-            }
-          }else if(isTooSoonSlot(d,time)){
-            btn.classList.add("past");
-            btn.disabled=true;
-            btn.textContent=`${time} 受付終了`;
-          }else{
-            btn.textContent=`${time} Xのみ`;
-            btn.addEventListener("click",()=>selectSlot(d,time,btn));
-          }
-        }else if(getSpecialReceptionState(d,time)?.state==="buffer"){
+        }else if(maintenanceState.closed){
+          btn.classList.add("maintenance","maintenance-closed");
+          btn.disabled=true;
+          btn.textContent=`${time} 受付停止`;
+        }else if(specialState?.state==="buffer"){
           btn.classList.add("transition-buffer");
           btn.disabled=true;
           btn.textContent=`${time} アディショナルタイム`;
@@ -1716,16 +1848,21 @@ button.slot.transition-buffer{
           btn.classList.add("past");
           btn.disabled=true;
           btn.textContent=`${time} 受付開始前`;
-        }else if(getSpecialReceptionState(d,time)?.state==="flexible"){
+        }else if(specialState?.state==="flexible"){
           const count=Number(flexibleSlotCounts[key] || 0);
           const closed=isTooSoonSlot(d,time);
           btn.classList.add("flexible");
+          if(maintenanceState.matches.length) btn.classList.add("maintenance");
           if(closed){
             btn.classList.add("past");
             btn.disabled=true;
           }
+          const statusText=closed
+            ? "受付終了"
+            : (supported.length===1 && supported[0]==="x" ? "Xのみ・随時受付" : "随時受付");
           btn.innerHTML=
-            `<span>${time} ${closed ? '受付終了' : '随時受付'}</span>`+
+            `<span>${time} ${statusText}</span>`+
+            (!closed ? supportIconsHtml(supported) : "")+
             (count>=1 ? `<span class="slot-count">${count}名予約済み</span>` : "");
           if(!btn.disabled){
             btn.addEventListener("click",()=>selectSlot(d,time,btn));
@@ -1735,7 +1872,9 @@ button.slot.transition-buffer{
           btn.disabled=true;
           btn.textContent=`${time} 受付終了`;
         }else{
-          btn.textContent=time;
+          if(maintenanceState.matches.length) btn.classList.add("maintenance");
+          const status=supported.length===1 && supported[0]==="x" ? " Xのみ" : "";
+          btn.innerHTML=`<span>${time}${status}</span>`+supportIconsHtml(supported);
           btn.addEventListener("click",()=>selectSlot(d,time,btn));
         }
         slots.appendChild(btn);
@@ -1753,10 +1892,14 @@ button.slot.transition-buffer{
   const cancelSuccessLayer=document.getElementById("cancelSuccessLayer");
   const cancelSuccessClose=document.getElementById("cancelSuccessClose");
 
-  function openBookingSuccess(useXContact=false){
-    bookingSuccessMessage.innerHTML=useXContact
-      ? '予約しました。<br>当日の予約時間にXのDMをご確認ください。<br>よろしくお願いします。'
-      : '予約しました。<br>当日はよろしくお願いします。';
+  function openBookingSuccess(method="game"){
+    if(method==="x"){
+      bookingSuccessMessage.innerHTML='予約しました。<br>当日の予約時間にXのDMをご確認ください。<br>よろしくお願いします。';
+    }else if(method==="companion"){
+      bookingSuccessMessage.innerHTML='予約しました。<br>コンパニオンアプリの3者専用チャットルームでご案内します。<br>よろしくお願いします。';
+    }else{
+      bookingSuccessMessage.innerHTML='予約しました。<br>当日はゲーム内でよろしくお願いします。';
+    }
     bookingSuccessLayer.classList.remove("hidden");
     bookingSuccessLayer.setAttribute("aria-hidden","false");
     bookingSuccessClose.focus();
@@ -1809,7 +1952,8 @@ button.slot.transition-buffer{
     document.querySelectorAll(".slot.selected").forEach(x=>x.classList.remove("selected"));
     button.classList.add("selected");
     selected={date,time};
-    selectedRequiresX=isMaintenanceXOnlySlot(date,time);
+    selectedSupportMethods=getSupportedMethodsForSlot(date,time);
+    selectedRequiresX=selectedSupportMethods.length===1 && selectedSupportMethods[0]==="x";
     selectedFlexible=getSpecialReceptionState(date,time)?.state==="flexible";
     document
       .getElementById("flexibleSelectedNotice")
@@ -1843,8 +1987,8 @@ button.slot.transition-buffer{
     document.getElementById("worldRow").classList.add("hidden");
     
     setDcValue("");
-    setXEnabled(false);
-    xContactPanel.classList.add("hidden");
+    setSupportMethod("");
+    supportMethodPanel.classList.add("hidden");
 
     const card=document.getElementById("formCard");
     card.classList.remove("hidden");
@@ -1861,42 +2005,59 @@ button.slot.transition-buffer{
     Mana:["Anima","Asura","Chocobo","Hades","Ixion","Masamune","Pandaemonium","Titan"],
     Meteor:["Belias","Mandragora","Ramuh","Shinryu","Unicorn","Valefor","Yojimbo","Zeromus"]
   };
-  const xContactPanel=document.getElementById("xContactPanel");
-  const xPreferenceRow=document.getElementById("xPreferenceRow");
-  const useX=document.getElementById("useX");
+  const supportMethodPanel=document.getElementById("supportMethodPanel");
+  const supportMethodInput=document.getElementById("supportMethod");
+  const supportMethodDescription=document.getElementById("supportMethodDescription");
   const xAccountRow=document.getElementById("xAccountRow");
   const xAccountInput=document.getElementById("xAccount");
+  const companionSupportNote=document.getElementById("companionSupportNote");
 
-  function setXEnabled(enabled,value=""){
-    useX.checked=!!enabled;
-    xAccountRow.classList.toggle("hidden",!enabled);
-    xAccountInput.value=enabled ? value : "";
+  function updateMethodDependentFields(){
+    const method=supportMethodInput.value;
+    const needsDc=
+      method==="game" &&
+      selected &&
+      (selected.date==="2026-10-11" || selected.date==="2026-10-12");
+    const needsWorld=
+      needsDc &&
+      selected.date==="2026-10-12" &&
+      selected.time<="18:30";
+
+    document.getElementById("dcRow").classList.toggle("hidden",!needsDc);
+    worldRow.classList.toggle("hidden",!needsWorld);
+    xAccountRow.classList.toggle("hidden",method!=="x");
+    companionSupportNote.classList.toggle("hidden",method!=="companion");
+
+    if(method==="game"){
+      supportMethodDescription.textContent="FF14ゲーム内でパーティを組み、招待URLをお送りします。";
+    }else if(method==="x"){
+      supportMethodDescription.textContent="XのDMで招待・登録をサポートします。";
+    }else if(method==="companion"){
+      supportMethodDescription.textContent="コンパニオンアプリの3者専用チャットルームで招待・登録をサポートします。";
+    }else{
+      supportMethodDescription.textContent="";
+    }
   }
 
-  useX.addEventListener("change",()=>{
-    if(selectedRequiresX && !useX.checked){
-      useX.checked=true;
-      xAccountRow.classList.remove("hidden");
-      showMessage("メンテナンス時間帯はXでのやりとりが必須です。","error");
-      return;
-    }
+  function setSupportMethod(method, contact=""){
+    const allowed=selectedSupportMethods.includes(method);
+    supportMethodInput.value=allowed ? method : "";
+    document.querySelectorAll(".support-method-card").forEach(btn=>{
+      const available=selectedSupportMethods.includes(btn.dataset.method);
+      const selected=allowed && btn.dataset.method===method;
+      btn.disabled=!available;
+      btn.classList.toggle("selected",selected);
+      btn.setAttribute("aria-checked",selected ? "true" : "false");
+    });
+    xAccountInput.value=method==="x" ? (contact || "") : "";
+    updateMethodDependentFields();
+  }
 
-    xAccountRow.classList.toggle("hidden",!useX.checked);
-    if(!useX.checked) xAccountInput.value="";
-
-    if(selected){
-      const worldRequired=
-        !selectedRequiresX &&
-        selected.date==="2026-10-12" &&
-        selected.time<="18:30" &&
-        !useX.checked;
-      worldRow.classList.toggle("hidden",!worldRequired);
-
-      if(worldRequired && !worldInput.value){
-        const selectedDc=dcInput.value;
-        if(selectedDc) setWorldOptions(selectedDc,worldInput.dataset.homeWorld || "");
-      }
-    }
+  document.querySelectorAll(".support-method-card").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      if(btn.disabled) return;
+      setSupportMethod(btn.dataset.method, btn.dataset.method==="x" ? xAccountInput.value : "");
+    });
   });
 
   function setWorldOptions(dc, preferred=""){
@@ -2012,7 +2173,10 @@ button.slot.transition-buffer{
       cancelMember=result;
       const dcText=result.meetingDc || result.dc || "DC指定なし";
       const worldText=result.meetingWorld || "ワールド指定なし";
-      cancelDc.textContent="集合DC: "+dcText+" / 集合ワールド: "+worldText;
+      const methodText=result.supportMethod==="x"
+        ? "X"
+        : (result.supportMethod==="companion" ? "コンパニオンアプリ" : "ゲーム内");
+      cancelDc.textContent="対応方法: "+methodText+" / 集合DC: "+dcText+" / 集合ワールド: "+worldText;
       cancelDc.classList.remove("hidden");
       resetCancelConfirm();
 
@@ -2090,31 +2254,31 @@ button.slot.transition-buffer{
       return showMessage("キャラクター名を入力して「OK」で確認してください。","error");
     }
 
+    const supportMethod=supportMethodInput.value;
+    if(!supportMethod || !selectedSupportMethods.includes(supportMethod)){
+      return showMessage("この時間帯で利用する招待・登録サポート方法を選択してください。","error");
+    }
+
     const dc=document.getElementById("dc").value;
     const needsDc=
-      !selectedRequiresX &&
+      supportMethod==="game" &&
       (selected.date==="2026-10-11" || selected.date==="2026-10-12");
-    if(needsDc && !dc) return showMessage("集合希望DCを選択してください。","error");
+    if(needsDc && !dc) return showMessage("ゲーム内対応では、集合希望DCを選択してください。","error");
 
     const needsWorld=
       needsDc &&
       selected.date==="2026-10-12" &&
-      selected.time<="18:30" &&
-      !useX.checked;
+      selected.time<="18:30";
     const world=worldInput.value;
     if(needsWorld && !world){
       worldInput.focus();
-      return showMessage("Xを利用しない場合は、集合希望ワールドを選択してください。","error");
+      return showMessage("ゲーム内対応では、集合希望ワールドを選択してください。","error");
     }
 
-    if(selectedRequiresX && !useX.checked){
-      return showMessage("メンテナンス時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
-    }
-
-    let xAccount="";
-    if(useX.checked){
-      xAccount=normalizeXAccount(xAccountInput.value);
-      if(!xAccount){
+    let contact="";
+    if(supportMethod==="x"){
+      contact=normalizeXAccount(xAccountInput.value);
+      if(!contact){
         xAccountInput.focus();
         return showMessage("X アカウント名が正しくありません。@og_ff14 のように入力してください。","error");
       }
@@ -2132,8 +2296,8 @@ button.slot.transition-buffer{
         name:name,
         dc:dc,
         world:world,
-        useX:useX.checked ? "1" : "0",
-        xAccount:xAccount
+        supportMethod:supportMethod,
+        contact:contact
       },"予約を登録しています…");
 
       if(!result.ok){
@@ -2142,7 +2306,7 @@ button.slot.transition-buffer{
         throw error;
       }
 
-      const bookedWithX=useX.checked;
+      const bookedSupportMethod=supportMethod;
       const bookedKey=result.bookedKey || `${selected.date} ${selected.time}`;
       if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
 
@@ -2164,11 +2328,11 @@ button.slot.transition-buffer{
       document.getElementById("characterName").value="";
       setDcValue("");
       worldRow.classList.add("hidden");
-      setXEnabled(false);
-      xContactPanel.classList.add("hidden");
+      setSupportMethod("");
+      supportMethodPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
 
-      openBookingSuccess(bookedWithX);
+      openBookingSuccess(bookedSupportMethod);
       scrollToSlot(bookedKey);
 
       if(result.mode!=="normal"){
@@ -2185,7 +2349,11 @@ button.slot.transition-buffer{
         document.getElementById("formCard").classList.add("hidden");
         showGlobalNotice("その時刻は他の方に先に予約されました。別の時刻を選択してください。","error");
       }else if(err.code==="MAINTENANCE_X_REQUIRED"){
-        showMessage("この時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
+        showMessage("この時間帯はXでの対応のみ受け付けています。","error");
+      }else if(err.code==="MAINTENANCE_FF14"){
+        showMessage("この時間帯はFF14メンテナンスのため、ゲーム内対応を利用できません。別の対応方法を選択してください。","error");
+      }else if(err.code==="MAINTENANCE_COMPANION"){
+        showMessage("この時間帯はコンパニオンアプリのメンテナンスのため、コンパニオンアプリ対応を利用できません。別の対応方法を選択してください。","error");
       }else if(err.code==="MAINTENANCE_CLOSED"){
         const maintenanceKey=selected ? `${selected.date} ${selected.time}` : null;
         await loadSlots();
