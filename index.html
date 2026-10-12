@@ -938,6 +938,96 @@ button.slot .support-icon-x{font-size:18px}
   animation:spin .8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+.booking-confirm-layer{
+  position:fixed;
+  inset:0;
+  z-index:10020;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(5,8,12,.72);
+  backdrop-filter:blur(4px);
+}
+.booking-confirm-dialog{
+  width:min(94vw,560px);
+  max-height:88vh;
+  overflow:auto;
+  border:1px solid rgba(224,192,117,.48);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(48,59,73,.99),rgba(28,37,48,.99));
+  box-shadow:0 22px 60px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);
+  padding:20px;
+}
+.booking-confirm-title{
+  margin:0 0 12px;
+  font-size:20px;
+  color:#fff1c7;
+}
+.booking-confirm-rules{
+  margin:0;
+  padding-left:1.35em;
+  line-height:1.75;
+  color:#edf3f8;
+}
+.booking-confirm-rules strong{color:#ffe08a}
+.booking-rule-check{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin:18px 0 14px;
+  padding:12px;
+  border:1px solid rgba(224,192,117,.35);
+  border-radius:9px;
+  background:rgba(226,191,106,.08);
+  cursor:pointer;
+}
+.booking-rule-check input[type="checkbox"]{
+  -webkit-appearance:auto;
+  appearance:auto;
+  width:22px;
+  height:22px;
+  min-height:0;
+  padding:0;
+  margin:1px 0 0;
+  flex:0 0 22px;
+  accent-color:#d2ad56;
+}
+.booking-confirm-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.booking-confirm-submit,.booking-confirm-close{
+  min-height:48px;
+  border-radius:8px;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+.booking-confirm-submit{
+  border:1px solid rgba(224,192,117,.50);
+  background:linear-gradient(180deg,#8d7139,#695126);
+  color:#fff3cf;
+}
+.booking-confirm-submit:disabled{
+  opacity:.38;
+  cursor:not-allowed;
+}
+.booking-confirm-close{
+  border:1px solid rgba(194,207,220,.28);
+  background:linear-gradient(180deg,#354354,#263341);
+  color:#e8eef5;
+}
+.booking-confirm-note{
+  margin:10px 0 0;
+  font-size:12px;
+  line-height:1.55;
+  color:#aebdca;
+}
+@media(max-width:520px){
+  .booking-confirm-actions{grid-template-columns:1fr}
+}
 .booking-success-layer{
   position:fixed;
   inset:0;
@@ -1006,6 +1096,27 @@ button.slot .support-icon-x{font-size:18px}
     <div id="processingText">処理中です…</div>
   </div>
 </div>
+<div id="bookingConfirmLayer" class="booking-confirm-layer hidden" aria-hidden="true">
+  <div class="booking-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="bookingConfirmTitle">
+    <h2 id="bookingConfirmTitle" class="booking-confirm-title">予約前の重要事項</h2>
+    <ul class="booking-confirm-rules">
+      <li><strong>予約枠は30分</strong>で、待機時間と登録サポート時間を含みます。</li>
+      <li>予約時刻までに、選択した方法ですぐ対応できる状態にしてください。</li>
+      <li><strong>予約時刻から10分以内に応答・合流できない場合はキャンセル扱い</strong>となります。</li>
+      <li>この10分ルールは、ゲーム内・X・コンパニオンアプリのすべてに共通です。</li>
+      <li>Xの<strong>DMとチャットは同じ連絡手段</strong>として扱います。どちらか一方だけを確認していたことは未応答の理由として扱いません。</li>
+    </ul>
+    <label class="booking-rule-check" for="bookingRuleConfirmed">
+      <input id="bookingRuleConfirmed" type="checkbox">
+      <span>上記を確認し、予約時刻から10分以内に応答・合流できない場合はキャンセル扱いとなることを確認しました。</span>
+    </label>
+    <div class="booking-confirm-actions">
+      <button id="bookingConfirmSubmit" class="booking-confirm-submit" type="button" disabled>確認して予約する</button>
+      <button id="bookingConfirmClose" class="booking-confirm-close" type="button">閉じる</button>
+    </div>
+    <p class="booking-confirm-note">「閉じる」はいつでも押せます。未確認のまま閉じた場合は、予約入力を破棄して日時選択前の状態に戻ります。</p>
+  </div>
+</div>
 <div id="bookingSuccessLayer" class="booking-success-layer hidden" aria-hidden="true">
   <div class="booking-success-dialog" role="dialog" aria-modal="true" aria-labelledby="bookingSuccessMessage">
     <p id="bookingSuccessMessage" class="booking-success-message">予約しました。<br>当日はよろしくお願いします。</p>
@@ -1032,10 +1143,10 @@ button.slot .support-icon-x{font-size:18px}
 
     <div class="maintenance-policy-note">
       <strong>臨時メンテナンスについて</strong><br>
-      期間中、FF14の臨時メンテナンス等が入る場合があります。<br>
-      メンテナンス設定により「Xのみ受付」または「受付停止」になる場合があります。<br>
-      「Xのみ受付」ではXでのやりとりを希望する予約だけ受け付け、「受付停止」ではX利用を含むすべての予約受付を停止します。<br>
-      対象時間帯の既存予約も設定内容に応じて自動的にキャンセルされます。あらかじめご了承ください。
+      FF14・X・コンパニオンアプリは、それぞれ個別に受付停止となる場合があります。<br>
+      予約枠には、その時間帯で実際に利用できるサポート方法だけをアイコンで表示します。<br>
+      すべての方法が停止している時間帯は「受付停止」となります。<br>
+      対象時間帯の既存予約も、選択済みの対応方法が利用できなくなった場合は自動的にキャンセルされます。
       <div id="maintenanceSchedule" class="maintenance-schedule hidden"></div>
     </div>
 
@@ -1064,9 +1175,9 @@ button.slot .support-icon-x{font-size:18px}
       <div class="support-guide-title">予約時間ごとに、利用できるサポート方法をアイコンで表示します。</div>
       <div class="support-guide-text">
         <strong>ゲーム内</strong>ではFF14内でパーティを組み、招待URLをお送りします。<br>
-        <strong>X</strong>ではDMで招待・登録をサポートします。事前に @og_ff14 とDMできる状態をご確認ください。<br>
+        <strong>X</strong>ではXのDM（チャット）で招待・登録をサポートします。DMとチャットは同じ連絡手段として扱います。事前に @og_ff14 とやりとりできる状態をご確認ください。<br>
         <strong>コンパニオンアプリ</strong>では、リーダーを含む3者専用チャットルームを作成し、その中で招待・登録をサポートします。<br>
-        FF14メンテナンス中はゲーム内対応、コンパニオンアプリのメンテナンス中はコンパニオン対応が利用できません。両方が重なる場合はXのみ利用できます。
+        予約枠には、その時間帯で利用できる方法だけをアイコンで表示します。
       </div>
       <div class="support-legend">
         <div class="support-legend-item"><span class="support-icon support-icon-game" aria-hidden="true"></span><span>ゲーム内</span></div>
@@ -1076,12 +1187,15 @@ button.slot .support-icon-x{font-size:18px}
     </div>
 
     <h2>当日の流れ</h2>
-    <div class="flow-duration-note">ゲーム内対応では、パーティを組んでからログイン確認まで約30分を予定しています。</div>
+    <div class="flow-duration-note">
+      <strong>予約枠は30分です。待機時間と登録サポートの時間を含みます。</strong><br>
+      予約時刻から10分以内に応答・合流が確認できない場合は、ゲーム内・X・コンパニオンアプリのいずれでも予約をキャンセル扱いとします。
+    </div>
     <ol>
-      <li>予約時に、その時間帯で利用可能なサポート方法を選択します。</li>
-      <li>ゲーム内対応の場合は予約時刻にFF14へログインしてください。</li>
-      <li>X対応の場合は予約時刻にDMをご確認ください。</li>
-      <li>コンパニオンアプリ対応の場合は、3者専用チャットルームでご案内します。</li>
+      <li>予約時刻までに、選択したサポート方法ですぐ対応できる状態にしてください。</li>
+      <li>ゲーム内対応はFF14へログインし、指定がある場合は集合DC・ワールドへ移動してください。</li>
+      <li>X対応はXのDM（チャット）をご確認ください。DMとチャットは同じ連絡手段として扱います。</li>
+      <li>コンパニオンアプリ対応は、リーダーを含む3者専用チャットルームをご確認ください。</li>
       <li>招待URLから登録し、正常にログインできるところまでサポートします。</li>
     </ol>
 
@@ -1163,7 +1277,7 @@ button.slot .support-icon-x{font-size:18px}
         <div id="xAccountRow" class="row hidden" style="margin-top:14px">
           <label for="xAccount">X アカウント名</label>
           <input id="xAccount" maxlength="16" autocomplete="off" placeholder="@og_ff14 等">
-          <div class="small">半角英数字と「_」のみ。@は付けても付けなくても構いません。事前に @og_ff14 とDMできる状態をご確認ください。</div>
+          <div class="small">半角英数字と「_」のみ。@は付けても付けなくても構いません。事前に @og_ff14 とDM（チャット）でやりとりできる状態をご確認ください。</div>
         </div>
         <div id="companionSupportNote" class="support-detail-note hidden">
           リーダーを含む3者専用チャットルームを作成し、その中で招待URLの送付と登録サポートを行います。
@@ -1901,10 +2015,15 @@ button.slot .support-icon-x{font-size:18px}
   const bookingSuccessMessage=document.getElementById("bookingSuccessMessage");
   const cancelSuccessLayer=document.getElementById("cancelSuccessLayer");
   const cancelSuccessClose=document.getElementById("cancelSuccessClose");
+  const bookingConfirmLayer=document.getElementById("bookingConfirmLayer");
+  const bookingRuleConfirmed=document.getElementById("bookingRuleConfirmed");
+  const bookingConfirmSubmit=document.getElementById("bookingConfirmSubmit");
+  const bookingConfirmClose=document.getElementById("bookingConfirmClose");
+  let pendingBookingRequest=null;
 
   function openBookingSuccess(method="game"){
     if(method==="x"){
-      bookingSuccessMessage.innerHTML='予約しました。<br>当日の予約時間にXのDMをご確認ください。<br>よろしくお願いします。';
+      bookingSuccessMessage.innerHTML='予約しました。<br>予約時刻にXのDM（チャット）をご確認ください。<br>10分以内に応答がない場合はキャンセル扱いとなります。';
     }else if(method==="companion"){
       bookingSuccessMessage.innerHTML='予約しました。<br>コンパニオンアプリの3者専用チャットルームでご案内します。<br>よろしくお願いします。';
     }else{
@@ -1941,12 +2060,68 @@ button.slot .support-icon-x{font-size:18px}
     if(e.target===cancelSuccessLayer) closeCancelSuccess();
   });
   document.addEventListener("keydown",e=>{
+    if(e.key==="Escape" && !bookingConfirmLayer.classList.contains("hidden")){
+      closeBookingConfirm();
+      return;
+    }
     if(e.key==="Escape" && !bookingSuccessLayer.classList.contains("hidden")){
       closeBookingSuccess();
     }
     if(e.key==="Escape" && !cancelSuccessLayer.classList.contains("hidden")){
       closeCancelSuccess();
     }
+  });
+
+  function resetBookingDraft(){
+    document.querySelectorAll(".slot.selected").forEach(x=>x.classList.remove("selected"));
+    selected=null;
+    selectedRequiresX=false;
+    selectedFlexible=false;
+    selectedSupportMethods=[];
+    verifiedMember=false;
+    verifiedMemberName="";
+    document.getElementById("characterName").value="";
+    document.getElementById("flexibleSelectedNotice").classList.add("hidden");
+    document.getElementById("dcRow").classList.add("hidden");
+    worldRow.classList.add("hidden");
+    setDcValue("");
+    setSupportMethod("");
+    supportMethodPanel.classList.add("hidden");
+    document.getElementById("message").className="";
+    document.getElementById("message").textContent="";
+    document.getElementById("formCard").classList.add("hidden");
+    document.getElementById("calendar").closest(".card").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
+  function openBookingConfirm(request){
+    pendingBookingRequest=request;
+    bookingRuleConfirmed.checked=false;
+    bookingConfirmSubmit.disabled=true;
+    bookingConfirmLayer.classList.remove("hidden");
+    bookingConfirmLayer.setAttribute("aria-hidden","false");
+    bookingRuleConfirmed.focus();
+  }
+
+  function closeBookingConfirm(){
+    const confirmed=bookingRuleConfirmed.checked;
+    bookingConfirmLayer.classList.add("hidden");
+    bookingConfirmLayer.setAttribute("aria-hidden","true");
+    bookingConfirmSubmit.disabled=true;
+    bookingRuleConfirmed.checked=false;
+    pendingBookingRequest=null;
+
+    if(!confirmed){
+      resetBookingDraft();
+    }
+  }
+
+  bookingRuleConfirmed.addEventListener("change",()=>{
+    bookingConfirmSubmit.disabled=!bookingRuleConfirmed.checked;
+  });
+
+  bookingConfirmClose.addEventListener("click",closeBookingConfirm);
+  bookingConfirmLayer.addEventListener("click",e=>{
+    if(e.target===bookingConfirmLayer) closeBookingConfirm();
   });
 
   function scrollToSlot(slotKey){
@@ -1971,9 +2146,7 @@ button.slot .support-icon-x{font-size:18px}
 
     if(selectedFlexible){
       document.getElementById("flexibleSelectedTitle").textContent=
-        selectedRequiresX
-          ? "この時間帯はXのみ・随時受付です。"
-          : "この時間帯は随時受付です。";
+        "この時間帯は随時受付です。";
     }
 
     const selectedDate=parseDate(date);
@@ -1985,9 +2158,7 @@ button.slot .support-icon-x{font-size:18px}
 
     document.getElementById("selectedText").innerHTML=
       `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`+
-      (selectedFlexible
-        ? (selectedRequiresX ? "（Xのみ・随時受付）" : "（随時受付）")
-        : "");
+      (selectedFlexible ? "（随時受付）" : "");
 
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
@@ -2041,7 +2212,7 @@ button.slot .support-icon-x{font-size:18px}
     if(method==="game"){
       supportMethodDescription.textContent="FF14ゲーム内でパーティを組み、招待URLをお送りします。";
     }else if(method==="x"){
-      supportMethodDescription.textContent="XのDMで招待・登録をサポートします。";
+      supportMethodDescription.textContent="XのDM（チャット）で招待・登録をサポートします。DMとチャットは同じ連絡手段として扱います。";
     }else if(method==="companion"){
       supportMethodDescription.textContent="コンパニオンアプリの3者専用チャットルームで招待・登録をサポートします。";
     }else{
@@ -2294,6 +2465,30 @@ button.slot .support-icon-x{font-size:18px}
       }
     }
 
+    openBookingConfirm({
+      date:selected.date,
+      time:selected.time,
+      name:name,
+      dc:dc,
+      world:world,
+      supportMethod:supportMethod,
+      contact:contact
+    });
+  });
+
+  bookingConfirmSubmit.addEventListener("click",async()=>{
+    if(!bookingRuleConfirmed.checked || !pendingBookingRequest) return;
+
+    const request=pendingBookingRequest;
+    bookingConfirmLayer.classList.add("hidden");
+    bookingConfirmLayer.setAttribute("aria-hidden","true");
+    bookingConfirmSubmit.disabled=true;
+    pendingBookingRequest=null;
+
+    await executePendingBooking(request);
+  });
+
+  async function executePendingBooking(request){
     const submit=document.getElementById("submitButton");
     submit.disabled=true;
     submit.textContent="予約しています…";
@@ -2301,13 +2496,13 @@ button.slot .support-icon-x{font-size:18px}
     try{
       const result=await jsonp({
         action:"book",
-        date:selected.date,
-        time:selected.time,
-        name:name,
-        dc:dc,
-        world:world,
-        supportMethod:supportMethod,
-        contact:contact
+        date:request.date,
+        time:request.time,
+        name:request.name,
+        dc:request.dc,
+        world:request.world,
+        supportMethod:request.supportMethod,
+        contact:request.contact
       },"予約を登録しています…");
 
       if(!result.ok){
@@ -2316,7 +2511,7 @@ button.slot .support-icon-x{font-size:18px}
         throw error;
       }
 
-      const bookedSupportMethod=supportMethod;
+      const bookedSupportMethod=request.supportMethod;
       const bookedKey=result.bookedKey || `${selected.date} ${selected.time}`;
       if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
 
@@ -2393,7 +2588,7 @@ button.slot .support-icon-x{font-size:18px}
       submit.disabled=false;
       submit.textContent="この日時で予約する";
     }
-  });
+  }
 
   loadSlots(0,true);
 
