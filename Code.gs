@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.14',
+  APP_VERSION: '2026.10.12.15',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -24,15 +24,15 @@ const CONFIG = {
   MEMBER_COL_STATUS: 4,
 
   // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC E=集合ワールド
-  // F=X利用 G=Xアカウント名 H=更新日時 I=対応状況 J=対象者に連絡 K=受付方式 L=備考
+  // F=対応方法 G=連絡先 H=更新日時 I=対応状況 J=対象者に連絡 K=受付方式 L=備考
   RES_FIRST_DATA_ROW: 2,
   RES_COL_NAME: 1,
   RES_COL_DATE: 2,
   RES_COL_TIME: 3,
   RES_COL_MEETING_DC: 4,
   RES_COL_MEETING_WORLD: 5,
-  RES_COL_USE_X: 6,
-  RES_COL_X_ACCOUNT: 7,
+  RES_COL_SUPPORT_METHOD: 6,
+  RES_COL_CONTACT: 7,
   RES_COL_UPDATED_AT: 8,
   RES_COL_MODE: 11,
   RES_COL_REMARKS: 12
@@ -78,8 +78,8 @@ function doGet(e) {
         name: e.parameter.name,
         dc: e.parameter.dc || '',
         world: e.parameter.world || '',
-        useX: e.parameter.useX === '1',
-        xAccount: e.parameter.xAccount || ''
+        supportMethod: e.parameter.supportMethod || (e.parameter.useX === '1' ? 'x' : 'game'),
+        contact: e.parameter.contact || e.parameter.xAccount || ''
       });
     } else if (action === 'cancel') {
       result = cancel_(e.parameter.name);
@@ -132,8 +132,10 @@ function member_(name) {
     bookingDate: hasBooking ? reservation.date : '',
     bookingTime: hasBooking ? reservation.time : '',
     bookingKey: hasBooking ? reservation.date + ' ' + reservation.time : '',
-    useX: hasBooking ? reservation.useX : false,
-    xAccount: hasBooking ? reservation.xAccount : ''
+    supportMethod: hasBooking ? reservation.supportMethod : '',
+    contact: hasBooking ? reservation.contact : '',
+    useX: hasBooking ? reservation.supportMethod === 'x' : false,
+    xAccount: hasBooking && reservation.supportMethod === 'x' ? reservation.contact : ''
   };
 }
 
@@ -189,11 +191,11 @@ function book_(input) {
       };
     }
 
-    if (maintenanceForSlot && !input.useX) {
+    if (maintenanceForSlot && input.supportMethod !== 'x') {
       return {
         ok: false,
         code: 'MAINTENANCE_X_REQUIRED',
-        message: 'この時間帯は、Xでのやりとりを希望する予約のみ受け付けています。'
+        message: 'この時間帯は、Xでの対応のみ受け付けています。'
       };
     }
 
@@ -252,8 +254,10 @@ function book_(input) {
       time: input.time,
       meetingDc: input.dc || '',
       meetingWorld: input.world || '',
-      useX: !!input.useX,
-      xAccount: input.xAccount || '',
+      supportMethod: input.supportMethod,
+      contact: input.contact || '',
+      useX: input.supportMethod === 'x',
+      xAccount: input.supportMethod === 'x' ? (input.contact || '') : '',
       mode: requestedMode
     };
 
@@ -361,9 +365,16 @@ function readReservations_(sheet) {
         return dcValue === '(DC指定省略)' ? '' : dcValue;
       })(),
       meetingWorld: String(values[i][4] || '').trim(),
+      supportMethod: (() => {
+        const methodValue = String(values[i][5] || '').trim();
+        if (methodValue === 'X' || methodValue.toLowerCase() === 'true' || methodValue === 'Xでやりとりを希望' || methodValue === '希望します') return 'x';
+        if (methodValue === 'コンパニオンアプリ') return 'companion';
+        return 'game';
+      })(),
+      contact: String(values[i][6] || '').trim(),
       useX: (() => {
-        const xValue = String(values[i][5] || '').trim();
-        return xValue.toLowerCase() === 'true' || xValue === 'Xでやりとりを希望' || xValue === '希望します';
+        const methodValue = String(values[i][5] || '').trim();
+        return methodValue === 'X' || methodValue.toLowerCase() === 'true' || methodValue === 'Xでやりとりを希望' || methodValue === '希望します';
       })(),
       xAccount: String(values[i][6] || '').trim(),
       updatedAt: String(values[i][7] || '').trim(),
@@ -713,13 +724,15 @@ function reservationFields_(reservation) {
       inline: false
     },
     {
-      name: 'X利用',
-      value: reservation.useX ? 'あり' : 'なし',
+      name: '対応方法',
+      value: reservation.supportMethod === 'x'
+        ? 'X'
+        : (reservation.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
       inline: false
     },
     {
-      name: 'Xアカウント名',
-      value: reservation.useX && reservation.xAccount ? reservation.xAccount : 'なし',
+      name: '連絡先',
+      value: reservation.supportMethod === 'x' && reservation.contact ? reservation.contact : 'なし',
       inline: false
     }
   ];
@@ -732,8 +745,8 @@ function hasReservationChanged_(before, after) {
     String(before.time || '') !== String(after.time || '') ||
     String(before.meetingDc || '') !== String(after.meetingDc || '') ||
     String(before.meetingWorld || '') !== String(after.meetingWorld || '') ||
-    !!before.useX !== !!after.useX ||
-    String(before.xAccount || '') !== String(after.xAccount || '') ||
+    String(before.supportMethod || 'game') !== String(after.supportMethod || 'game') ||
+    String(before.contact || '') !== String(after.contact || '') ||
     String(before.mode || 'normal') !== String(after.mode || 'normal')
   );
 }
@@ -775,13 +788,15 @@ function notifyDiscordReservationChanged_(before, after) {
         inline: false
       },
       {
-        name: 'X利用',
-        value: after.useX ? 'あり' : 'なし',
+        name: '対応方法',
+        value: after.supportMethod === 'x'
+          ? 'X'
+          : (after.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
         inline: false
       },
       {
-        name: 'Xアカウント名',
-        value: after.useX && after.xAccount ? after.xAccount : 'なし',
+        name: '連絡先',
+        value: after.supportMethod === 'x' && after.contact ? after.contact : 'なし',
         inline: false
       }
     ]
@@ -831,8 +846,10 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
         inline: false
       },
       {
-        name: 'X利用',
-        value: reservation.useX ? 'あり' : 'なし',
+        name: '対応方法',
+        value: reservation.supportMethod === 'x'
+          ? 'X'
+          : (reservation.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
         inline: false
       }
     ];
@@ -934,8 +951,10 @@ function upsertReservation_(sheet, existing, data) {
     data.time,
     data.meetingDc || '(DC指定省略)',
     data.meetingWorld || '',
-    data.useX ? '希望します' : '',
-    data.useX ? data.xAccount : '',
+    data.supportMethod === 'x'
+      ? 'X'
+      : (data.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
+    data.supportMethod === 'x' ? (data.contact || '') : '',
     updatedAt
   ]];
 
@@ -1065,41 +1084,46 @@ function validateBooking_(input) {
     throw new Error('キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。');
   }
 
+  const allowedMethods = ['game', 'x', 'companion'];
+  if (!allowedMethods.includes(input.supportMethod)) {
+    throw new Error('招待・登録サポート方法を選択してください。');
+  }
+
   const allowedDc = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
   const privateSs = getReservationSpreadsheet_();
   const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
   const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
   const maintenanceSlot = isSlotInMaintenance_(input.date, input.time, maintenance);
   const needsDc =
+    input.supportMethod === 'game' &&
     !maintenanceSlot &&
     (input.date === '2026-10-11' || input.date === '2026-10-12');
 
   if (needsDc && !allowedDc.includes(input.dc)) {
-    throw new Error('集合希望DCを選択してください。');
+    throw new Error('ゲーム内対応では、集合希望DCを選択してください。');
   }
 
   const needsWorld =
     needsDc &&
     input.date === '2026-10-12' &&
-    input.time <= '18:30' &&
-    !input.useX;
+    input.time <= '18:30';
 
   if (needsWorld && !String(input.world || '').trim()) {
-    throw new Error('Xを利用しない場合は、集合希望ワールドを選択してください。');
+    throw new Error('ゲーム内対応では、集合希望ワールドを選択してください。');
   }
 
   if (!needsDc) input.dc = '';
   if (!needsWorld) input.world = '';
 
-  if (input.useX) {
-    const raw = String(input.xAccount || '').trim();
+  if (input.supportMethod === 'x') {
+    const raw = String(input.contact || '').trim();
     const handle = raw.startsWith('@') ? raw.slice(1) : raw;
     if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) {
       throw new Error('X アカウント名が正しくありません。@og_ff14 のように入力してください。');
     }
-    input.xAccount = '@' + handle;
+    input.contact = '@' + handle;
   } else {
-    input.xAccount = '';
+    input.contact = '';
   }
 }
 
