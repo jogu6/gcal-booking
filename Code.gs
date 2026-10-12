@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.13',
+  APP_VERSION: '2026.10.12.14',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -1081,10 +1081,11 @@ function validateBooking_(input) {
   const needsWorld =
     needsDc &&
     input.date === '2026-10-12' &&
-    input.time <= '18:30';
+    input.time <= '18:30' &&
+    !input.useX;
 
   if (needsWorld && !String(input.world || '').trim()) {
-    throw new Error('集合希望ワールドを選択してください。');
+    throw new Error('Xを利用しない場合は、集合希望ワールドを選択してください。');
   }
 
   if (!needsDc) input.dc = '';
