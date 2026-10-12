@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Poly Dice Roller</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f17;
+      --panel: #121826;
+      --panel2: #192132;
+      --text: #eef3ff;
+      --muted: #9eabc2;
+      --accent: #79a8ff;
+      --border: rgba(255,255,255,.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(70,110,180,.22), transparent 34rem),
+        linear-gradient(180deg, #0a0e16 0%, #06090f 100%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .wrap {
+      width: min(1100px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 24px 0 32px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(24px, 4vw, 42px);
+      letter-spacing: .02em;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+      justify-content: flex-end;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input {
+      width: 110px;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0 12px;
+      font: inherit;
+      font-size: 18px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(121,168,255,.12);
+    }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 10px;
+      padding: 0 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(180deg, #93bbff, #5f8fdf);
+      color: #061020;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 28px rgba(35,91,180,.2);
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: default;
+    }
+
+    .stage-shell {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,255,255,.035), transparent 42%),
+        linear-gradient(180deg, rgba(24,32,47,.95), rgba(10,14,22,.98));
+      min-height: 560px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+
+    #stage {
+      display: block;
+      width: 100%;
+      height: 560px;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px;
+    }
+
+    .badge {
+      align-self: flex-start;
+      padding: 8px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(7,10,16,.5);
+      backdrop-filter: blur(8px);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .result {
+      align-self: center;
+      min-width: min(92%, 420px);
+      text-align: center;
+      padding: 16px 22px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(7,10,16,.62);
+      backdrop-filter: blur(10px);
+      transform: translateY(8px);
+      opacity: 0;
+      transition: opacity .28s ease, transform .28s ease;
+    }
+
+    .result.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .result small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 3px;
+      font-size: 12px;
+      letter-spacing: .12em;
+    }
+
+    .result strong {
+      display: block;
+      font-size: clamp(46px, 8vw, 86px);
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+
+    .info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      padding: 13px 14px;
+    }
+
+    .card b {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 13px;
+    }
+
+    .card span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .error {
+      color: #ffb2b2;
+    }
+
+    @media (max-width: 720px) {
+      .top { grid-template-columns: 1fr; }
+      .controls { justify-content: stretch; }
+      .controls label { flex: 1; }
+      input { width: 100%; }
+      button { flex: 1; }
+      .stage-shell { min-height: 460px; }
+      #stage { height: 460px; }
+      .info { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .result { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="top">
+      <div>
+        <h1>3D Poly Dice Roller</h1>
+        <p class="sub">
+          結果は 1〜指定値の乱数です。3D多面体は演出専用で、出目とは連動しません。
+        </p>
+      </div>
+
+      <form class="controls" id="controls">
+        <label>
+          最大値
+          <input id="maxValue" type="number" min="2" max="100" step="1" value="20" inputmode="numeric" />
+        </label>
+        <button id="rollButton" type="submit">ROLL</button>
+      </form>
+    </section>
+
+    <section class="stage-shell">
+      <canvas id="stage" aria-label="3Dサイコロ表示"></canvas>
+      <div class="hud">
+        <div id="shapeBadge" class="badge">表示形状: 20面体</div>
+        <div id="resultBox" class="result" aria-live="polite">
+          <small>RESULT</small>
+          <strong id="resultValue">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="info">
+      <div class="card">
+        <b>結果</b>
+        <span>Web Crypto APIで 1〜指定値の整数を生成します。</span>
+      </div>
+      <div class="card">
+        <b>見た目</b>
+        <span>入力値に応じて、近い見栄えの多面体へ切り替えます。</span>
+      </div>
+      <div class="card">
+        <b>実行条件</b>
+        <span id="statusText">Three.jsをCDNから読み込み中です。</span>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+    const canvas = document.getElementById('stage');
+    const form = document.getElementById('controls');
+    const input = document.getElementById('maxValue');
+    const button = document.getElementById('rollButton');
+    const resultBox = document.getElementById('resultBox');
+    const resultValue = document.getElementById('resultValue');
+    const shapeBadge = document.getElementById('shapeBadge');
+    const statusText = document.getElementById('statusText');
+
+    const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    const mobileDevice = matchMedia('(pointer: coarse)').matches;
+    const cpuCores = navigator.hardwareConcurrency || 4;
+    const lowSpec = cpuCores <= 4;
+    const qualityScale = lowSpec ? 1 : (mobileDevice ? 1.25 : 1.5);
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, qualityScale));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0f18, 0.045);
+
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.set(0, 4.6, 10.5);
+    camera.lookAt(0, 1.1, 0);
+
+    const hemi = new THREE.HemisphereLight(0xc9ddff, 0x101010, 2.1);
+    scene.add(hemi);
+
+    const key = new THREE.DirectionalLight(0xffffff, 5.0);
+    key.position.set(5, 9, 5);
+    key.castShadow = true;
+    const shadowSize = lowSpec ? 512 : (mobileDevice ? 768 : 1024);
+    key.shadow.mapSize.set(shadowSize, shadowSize);
+    key.shadow.camera.left = -6;
+    key.shadow.camera.right = 6;
+    key.shadow.camera.top = 6;
+    key.shadow.camera.bottom = -6;
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0x7da8ff, 3.0);
+    rim.position.set(-5, 4, -4);
+    scene.add(rim);
+
+    const point = new THREE.PointLight(0x9bc1ff, 30, 18, 2);
+    point.position.set(0, 2.5, 3.5);
+    scene.add(point);
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(24, 24),
+      new THREE.MeshStandardMaterial({
+        color: 0x0a0d12,
+        roughness: 0.78,
+        metalness: 0.18
+      })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1.6;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(2.2, 4.6, 96),
+      new THREE.MeshBasicMaterial({
+        color: 0x263a5a,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -1.58;
+    scene.add(ring);
+
+    const diceGroup = new THREE.Group();
+    scene.add(diceGroup);
+
+    let diceMesh = null;
+    let edgeLines = null;
+    let glowLines = null;
+    let rolling = false;
+    let animationStart = 0;
+    let rollDuration = 2300;
+    let targetResult = 1;
+
+    const clock = new THREE.Clock();
+
+    function getShapeInfo(max) {
+      if (max <= 2) {
+        return { label: '2面風（コイン）', type: 'coin' };
+      }
+      if (max <= 4) {
+        return { label: '4面体', type: 'tetra' };
+      }
+      if (max <= 6) {
+        return { label: '6面体', type: 'cube' };
+      }
+      if (max <= 8) {
+        return { label: '8面体', type: 'octa' };
+      }
+      if (max <= 12) {
+        return { label: '12面体', type: 'dodeca' };
+      }
+      if (max <= 20) {
+        return { label: '20面体', type: 'icosa' };
+      }
+      if (max <= 40) {
+        return { label: '高密度多面体', type: 'dense1' };
+      }
+      if (max <= 70) {
+        return { label: '高密度多面体+', type: 'dense2' };
+      }
+      return { label: '100面風多面体', type: 'dense3' };
+    }
+
+    function buildGeometry(type) {
+      switch (type) {
+        case 'coin':
+          return new THREE.CylinderGeometry(1.65, 1.65, 0.5, 48, 1);
+        case 'tetra':
+          return new THREE.TetrahedronGeometry(1.9, 0);
+        case 'cube':
+          return new THREE.BoxGeometry(2.7, 2.7, 2.7, 2, 2, 2);
+        case 'octa':
+          return new THREE.OctahedronGeometry(1.95, 0);
+        case 'dodeca':
+          return new THREE.DodecahedronGeometry(1.85, 0);
+        case 'icosa':
+          return new THREE.IcosahedronGeometry(1.9, 0);
+        case 'dense1':
+          return new THREE.IcosahedronGeometry(1.9, 1);
+        case 'dense2':
+          return new THREE.IcosahedronGeometry(1.9, 1);
+        case 'dense3':
+          return new THREE.IcosahedronGeometry(1.9, lowSpec ? 1 : 2);
+        default:
+          return new THREE.IcosahedronGeometry(1.9, 0);
+      }
+    }
+
+    function replaceDice(max) {
+      const info = getShapeInfo(max);
+      shapeBadge.textContent = `表示形状: ${info.label}`;
+
+      if (diceMesh) {
+        diceMesh.geometry.dispose();
+        diceMesh.material.dispose();
+        diceGroup.remove(diceMesh);
+      }
+
+      if (edgeLines) {
+        edgeLines.geometry.dispose();
+        edgeLines.material.dispose();
+        diceGroup.remove(edgeLines);
+      }
+
+      if (glowLines) {
+        glowLines.geometry.dispose();
+        glowLines.material.dispose();
+        diceGroup.remove(glowLines);
+      }
+
+      const geometry = buildGeometry(info.type);
+
+      const material = new THREE.MeshPhysicalMaterial({
+        color: 0x6f91c7,
+        roughness: 0.24,
+        metalness: 0.78,
+        clearcoat: lowSpec ? 0.35 : 0.65,
+        clearcoatRoughness: 0.15,
+        reflectivity: 0.9,
+        iridescence: lowSpec ? 0 : 0.12,
+        flatShading: true
+      });
+
+      diceMesh = new THREE.Mesh(geometry, material);
+      diceMesh.castShadow = true;
+      diceMesh.receiveShadow = true;
+      diceGroup.add(diceMesh);
+
+      // 高面数でも多面体らしさを失わないよう、ほぼ全ての面境界を描画する。
+      const edgeGeometry = new THREE.EdgesGeometry(geometry, 1);
+
+      // 外側にごく薄い線を重ねて、軽量な「発光風」表現にする。
+      const glowMaterial = new THREE.LineBasicMaterial({
+        color: 0x7fb8ff,
+        transparent: true,
+        opacity: lowSpec ? 0.16 : 0.24,
+        depthWrite: false
+      });
+      glowLines = new THREE.LineSegments(edgeGeometry.clone(), glowMaterial);
+      glowLines.scale.setScalar(1.018);
+      glowLines.renderOrder = 1;
+      diceGroup.add(glowLines);
+
+      const edgeMaterial = new THREE.LineBasicMaterial({
+        color: 0xf1f7ff,
+        transparent: true,
+        opacity: 0.78,
+        depthWrite: false
+      });
+
+      edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+      edgeLines.scale.setScalar(1.006);
+      edgeLines.renderOrder = 2;
+      diceGroup.add(edgeLines);
+
+      if (info.type === 'coin') {
+        diceGroup.rotation.set(Math.PI / 2.8, 0, 0);
+      } else {
+        diceGroup.rotation.set(0.4, 0.65, 0.2);
+      }
+    }
+
+    function secureRandomInt(max) {
+      const range = 0x100000000;
+      const limit = range - (range % max);
+      const values = new Uint32Array(1);
+      let n;
+      do {
+        crypto.getRandomValues(values);
+        n = values[0];
+      } while (n >= limit);
+      return (n % max) + 1;
+    }
+
+    function clampMax(value) {
+      const n = Number.parseInt(value, 10);
+      if (!Number.isFinite(n)) return 20;
+      return Math.min(100, Math.max(2, n));
+    }
+
+    function startRoll(max) {
+      input.value = String(max);
+      replaceDice(max);
+
+      targetResult = secureRandomInt(max);
+      rolling = true;
+      animationStart = performance.now();
+      rollDuration = prefersReducedMotion ? 200 : 2200 + Math.random() * 650;
+
+      resultBox.classList.remove('show');
+      resultValue.textContent = '—';
+      button.disabled = true;
+
+      diceGroup.position.set(0, 4.6, 0);
+      diceGroup.scale.setScalar(0.96);
+      diceGroup.rotation.set(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      );
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const max = clampMax(input.value);
+      startRoll(max);
+    });
+
+    input.addEventListener('change', () => {
+      const max = clampMax(input.value);
+      input.value = String(max);
+      if (!rolling) replaceDice(max);
+    });
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function animateRoll(now) {
+      if (!rolling) return;
+
+      const raw = Math.min(1, (now - animationStart) / rollDuration);
+      const t = easeOutCubic(raw);
+
+      const spin = (1 - t);
+      diceGroup.rotation.x += 0.24 * spin + 0.012;
+      diceGroup.rotation.y += 0.32 * spin + 0.015;
+      diceGroup.rotation.z += 0.18 * spin + 0.009;
+
+      const fall = THREE.MathUtils.lerp(4.6, -0.02, Math.min(1, raw * 1.4));
+      const bounceStrength = 2.25 * (1 - raw);
+      const bounce = Math.abs(Math.sin(raw * Math.PI * 6.2)) * bounceStrength;
+
+      diceGroup.position.y = Math.max(-0.02, fall + bounce);
+      diceGroup.position.x = Math.sin(raw * Math.PI * 2.0) * 0.42 * (1 - raw);
+      diceGroup.position.z = Math.cos(raw * Math.PI * 1.7) * 0.3 * (1 - raw);
+
+      const pulse = 0.96 + Math.sin(raw * Math.PI) * 0.045;
+      diceGroup.scale.setScalar(pulse);
+
+      if (raw >= 1) {
+        rolling = false;
+        diceGroup.position.set(0, -0.02, 0);
+        diceGroup.scale.setScalar(1);
+        resultValue.textContent = String(targetResult);
+        resultBox.classList.add('show');
+        button.disabled = false;
+      }
+    }
+
+    function resize() {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      if (canvas.width !== Math.floor(width * renderer.getPixelRatio()) ||
+          canvas.height !== Math.floor(height * renderer.getPixelRatio())) {
+        renderer.setSize(width, height, false);
+      }
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    function render(now) {
+      resize();
+      const dt = clock.getDelta();
+
+      if (!rolling) {
+        diceGroup.rotation.y += dt * 0.22;
+        diceGroup.rotation.x += dt * 0.06;
+      }
+
+      // 回転中はエッジを少し強調。停止時は落ち着いた明るさに戻す。
+      if (edgeLines) {
+        const target = rolling ? 0.94 : 0.78;
+        edgeLines.material.opacity += (target - edgeLines.material.opacity) * 0.08;
+      }
+      if (glowLines) {
+        const target = rolling ? (lowSpec ? 0.20 : 0.34) : (lowSpec ? 0.16 : 0.24);
+        glowLines.material.opacity += (target - glowLines.material.opacity) * 0.08;
+      }
+
+      ring.rotation.z += dt * 0.08;
+      animateRoll(now);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+
+    replaceDice(clampMax(input.value));
+    statusText.textContent =
+      `準備完了。自動画質: ${lowSpec ? '軽量' : (mobileDevice ? 'モバイル' : '標準')}。エッジ強調版です。`;
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
