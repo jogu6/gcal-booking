@@ -1870,7 +1870,7 @@ button.slot .support-icon-x{font-size:18px}
           }
           const statusText=closed
             ? "受付終了"
-            : (supported.length===1 && supported[0]==="x" ? "Xのみ・随時受付" : "随時受付");
+            : "随時受付";
           btn.innerHTML=
             `<span>${time} ${statusText}</span>`+
             (!closed ? supportIconsHtml(supported) : "")+
@@ -1884,8 +1884,7 @@ button.slot .support-icon-x{font-size:18px}
           btn.textContent=`${time} 受付終了`;
         }else{
           if(maintenanceState.matches.length) btn.classList.add("maintenance");
-          const status=supported.length===1 && supported[0]==="x" ? " Xのみ" : "";
-          btn.innerHTML=`<span>${time}${status}</span>`+supportIconsHtml(supported);
+          btn.innerHTML=`<span>${time}</span>`+supportIconsHtml(supported);
           btn.addEventListener("click",()=>selectSlot(d,time,btn));
         }
         slots.appendChild(btn);
