@@ -2512,7 +2512,7 @@ button.slot .support-icon-x{font-size:18px}
       }
 
       const bookedSupportMethod=request.supportMethod;
-      const bookedKey=result.bookedKey || `${selected.date} ${selected.time}`;
+      const bookedKey=result.bookedKey || `${request.date} ${request.time}`;
       if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
 
       if(result.mode==="normal"){
