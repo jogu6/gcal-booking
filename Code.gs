@@ -181,9 +181,9 @@ function book_(input) {
     const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
     const specialReception = getSpecialReceptionPeriodsFromSheet_(specialReceptionSheet);
 
-    const maintenanceForSlot = getMaintenanceForSlot_(input.date, input.time, maintenance);
+    const maintenanceState = getMaintenanceStateForSlot_(input.date, input.time, maintenance);
 
-    if (maintenanceForSlot && maintenanceForSlot.mode === 'closed') {
+    if (maintenanceState.closed) {
       return {
         ok: false,
         code: 'MAINTENANCE_CLOSED',
@@ -191,12 +191,21 @@ function book_(input) {
       };
     }
 
-    if (maintenanceForSlot && input.supportMethod !== 'x') {
-      return {
-        ok: false,
-        code: 'MAINTENANCE_X_REQUIRED',
-        message: 'この時間帯は、Xでの対応のみ受け付けています。'
-      };
+    if (!isSupportMethodAvailableForMaintenance_(input.supportMethod, maintenanceState)) {
+      if (input.supportMethod === 'game' && maintenanceState.ff14) {
+        return {
+          ok: false,
+          code: 'MAINTENANCE_FF14',
+          message: 'この時間帯はFF14メンテナンスのため、ゲーム内対応を利用できません。'
+        };
+      }
+      if (input.supportMethod === 'companion' && maintenanceState.companion) {
+        return {
+          ok: false,
+          code: 'MAINTENANCE_COMPANION',
+          message: 'この時間帯はコンパニオンアプリのメンテナンスのため、コンパニオンアプリ対応を利用できません。'
+        };
+      }
     }
 
     const specialState = getSpecialReceptionStateForSlot_(
@@ -513,13 +522,23 @@ function getMaintenancePeriodsFromSheet_(sheet) {
     const endMs = dateToJstPseudoMs_(row[2]);
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return;
 
+    const rawService = String(row[4] || '').trim();
+    let service = 'ff14';
+    if (rawService === '全面受付停止' || rawService === '受付停止') {
+      service = 'closed';
+    } else if (rawService === 'コンパニオンアプリ') {
+      service = 'companion';
+    } else if (rawService === 'FF14' || rawService === 'Xのみ受付' || rawService === '') {
+      service = 'ff14';
+    }
+
     periods.push({
       startMs: startMs,
       endMs: endMs,
       start: Utilities.formatDate(row[1], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
       end: Utilities.formatDate(row[2], CONFIG.TIME_ZONE, "yyyy-MM-dd'T'HH:mm"),
       message: String(row[3] || '').trim(),
-      mode: String(row[4] || '').trim() === '受付停止' ? 'closed' : 'x_only'
+      service: service
     });
   });
 
@@ -532,7 +551,7 @@ function publicMaintenance_(period) {
     start: period.start,
     end: period.end,
     message: period.message || '',
-    mode: period.mode || 'x_only'
+    service: period.service || 'ff14'
   };
 }
 
@@ -626,20 +645,40 @@ function slotStartPseudoMs_(date, time) {
   return localStampToPseudoMs_(date + ' ' + time);
 }
 
-function getMaintenanceForSlot_(date, time, maintenance) {
+function getMaintenanceMatchesForSlot_(date, time, maintenance) {
   const slotStart = slotStartPseudoMs_(date, time);
   const slotEnd = slotStart + CONFIG.SLOT_MINUTES * 60 * 1000;
 
-  const matches = maintenance.filter(period =>
+  return maintenance.filter(period =>
     slotStart < period.endMs && slotEnd > period.startMs
   );
+}
 
-  if (!matches.length) return null;
-  return matches.find(period => period.mode === 'closed') || matches[0];
+function getMaintenanceStateForSlot_(date, time, maintenance) {
+  const matches = getMaintenanceMatchesForSlot_(date, time, maintenance);
+  return {
+    matches: matches,
+    closed: matches.some(period => period.service === 'closed'),
+    ff14: matches.some(period => period.service === 'ff14'),
+    companion: matches.some(period => period.service === 'companion')
+  };
+}
+
+function getMaintenanceForSlot_(date, time, maintenance) {
+  const state = getMaintenanceStateForSlot_(date, time, maintenance);
+  if (!state.matches.length) return null;
+  return state.matches.find(period => period.service === 'closed') || state.matches[0];
 }
 
 function isSlotInMaintenance_(date, time, maintenance) {
-  return !!getMaintenanceForSlot_(date, time, maintenance);
+  return getMaintenanceStateForSlot_(date, time, maintenance).matches.length > 0;
+}
+
+function isSupportMethodAvailableForMaintenance_(method, state) {
+  if (state.closed) return false;
+  if (method === 'game') return !state.ff14;
+  if (method === 'companion') return !state.companion;
+  return method === 'x';
 }
 
 function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) {
@@ -650,14 +689,14 @@ function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) 
   const autoCancelled = [];
 
   reservations.forEach(reservation => {
-    const period =
-      reservation.date &&
-      reservation.time &&
-      getMaintenanceForSlot_(reservation.date, reservation.time, maintenance);
+    const state =
+      reservation.date && reservation.time
+        ? getMaintenanceStateForSlot_(reservation.date, reservation.time, maintenance)
+        : { matches: [], closed: false, ff14: false, companion: false };
 
     const shouldCancel =
-      !!period &&
-      (period.mode === 'closed' || !reservation.useX);
+      state.matches.length > 0 &&
+      !isSupportMethodAvailableForMaintenance_(reservation.supportMethod || 'game', state);
 
     if (shouldCancel) {
       removeRows.push(reservation.row);
@@ -818,7 +857,7 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
   if (!webhookUrl) return;
 
   const embeds = reservations.map(reservation => {
-    const period = getMaintenanceForSlot_(
+    const state = getMaintenanceStateForSlot_(
       reservation.date,
       reservation.time,
       maintenance
@@ -854,25 +893,30 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
       }
     ];
 
-    if (period) {
+    if (state.matches.length) {
+      const serviceLabels = [];
+      if (state.closed) serviceLabels.push('全面受付停止');
+      if (state.ff14) serviceLabels.push('FF14メンテナンス');
+      if (state.companion) serviceLabels.push('コンパニオンアプリメンテナンス');
+
       fields.push({
-        name: '受付方式',
-        value: period.mode === 'closed' ? '受付停止' : 'Xのみ受付',
-        inline: false
-      });
-      fields.push({
-        name: 'メンテナンス時間',
-        value: period.start.replace('T',' ') + ' ～ ' + period.end.replace('T',' '),
+        name: 'メンテナンス',
+        value: serviceLabels.join(' / '),
         inline: false
       });
 
-      if (period.message) {
-        fields.push({
-          name: '案内',
-          value: period.message,
-          inline: false
-        });
-      }
+      const periodText = state.matches
+        .map(period =>
+          period.start.replace('T',' ') + ' ～ ' + period.end.replace('T',' ') +
+          (period.message ? ' / ' + period.message : '')
+        )
+        .join('\n');
+
+      fields.push({
+        name: '該当時間',
+        value: periodText,
+        inline: false
+      });
     }
 
     return {
@@ -1093,10 +1137,11 @@ function validateBooking_(input) {
   const privateSs = getReservationSpreadsheet_();
   const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
   const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
-  const maintenanceSlot = isSlotInMaintenance_(input.date, input.time, maintenance);
+  const maintenanceState = getMaintenanceStateForSlot_(input.date, input.time, maintenance);
   const needsDc =
     input.supportMethod === 'game' &&
-    !maintenanceSlot &&
+    !maintenanceState.closed &&
+    !maintenanceState.ff14 &&
     (input.date === '2026-10-11' || input.date === '2026-10-12');
 
   if (needsDc && !allowedDc.includes(input.dc)) {
