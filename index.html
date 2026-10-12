@@ -1067,7 +1067,7 @@ button.slot.transition-buffer{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.13";
+  const EXPECTED_API_VERSION = "2026.10.12.14";
 
   let START_DATE = "2026-10-11";
 
@@ -1467,7 +1467,8 @@ button.slot.transition-buffer{
       const needsWorld=
         needsDc &&
         selected.date==="2026-10-12" &&
-        selected.time<="18:30";
+        selected.time<="18:30" &&
+        !useX.checked;
       if(needsDc){
         dcRow.classList.remove("hidden");
 
@@ -1475,6 +1476,7 @@ button.slot.transition-buffer{
         const initialWorld=
           result.meetingWorld ||
           (initialDc===result.dc ? (result.world || "") : "");
+        worldInput.dataset.homeWorld=result.world || "";
         setDcValue(initialDc,initialWorld);
 
         worldRow.classList.toggle("hidden",!needsWorld);
@@ -1878,8 +1880,23 @@ button.slot.transition-buffer{
       showMessage("メンテナンス時間帯はXでのやりとりが必須です。","error");
       return;
     }
+
     xAccountRow.classList.toggle("hidden",!useX.checked);
     if(!useX.checked) xAccountInput.value="";
+
+    if(selected){
+      const worldRequired=
+        !selectedRequiresX &&
+        selected.date==="2026-10-12" &&
+        selected.time<="18:30" &&
+        !useX.checked;
+      worldRow.classList.toggle("hidden",!worldRequired);
+
+      if(worldRequired && !worldInput.value){
+        const selectedDc=dcInput.value;
+        if(selectedDc) setWorldOptions(selectedDc,worldInput.dataset.homeWorld || "");
+      }
+    }
   });
 
   function setWorldOptions(dc, preferred=""){
@@ -2082,11 +2099,12 @@ button.slot.transition-buffer{
     const needsWorld=
       needsDc &&
       selected.date==="2026-10-12" &&
-      selected.time<="18:30";
+      selected.time<="18:30" &&
+      !useX.checked;
     const world=worldInput.value;
     if(needsWorld && !world){
       worldInput.focus();
-      return showMessage("集合希望ワールドを選択してください。","error");
+      return showMessage("Xを利用しない場合は、集合希望ワールドを選択してください。","error");
     }
 
     if(selectedRequiresX && !useX.checked){
