@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.11',
+  APP_VERSION: '2026.10.12.12',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -24,7 +24,7 @@ const CONFIG = {
   MEMBER_COL_STATUS: 4,
 
   // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC
-  // E=X利用 F=Xアカウント名 G=更新日時 H=対応状況 I=対象者に連絡 J=受付方式
+  // E=X利用 F=Xアカウント名 G=更新日時 H=対応状況 I=対象者に連絡 J=受付方式 K=集合ワールド
   RES_FIRST_DATA_ROW: 2,
   RES_COL_NAME: 1,
   RES_COL_DATE: 2,
@@ -33,7 +33,8 @@ const CONFIG = {
   RES_COL_USE_X: 5,
   RES_COL_X_ACCOUNT: 6,
   RES_COL_UPDATED_AT: 7,
-  RES_COL_MODE: 10
+  RES_COL_MODE: 10,
+  RES_COL_MEETING_WORLD: 11
 };
 
 function doGet(e) {
@@ -75,6 +76,7 @@ function doGet(e) {
         time: e.parameter.time,
         name: e.parameter.name,
         dc: e.parameter.dc || '',
+        world: e.parameter.world || '',
         useX: e.parameter.useX === '1',
         xAccount: e.parameter.xAccount || ''
       });
@@ -107,7 +109,9 @@ function member_(name) {
   const member = findMember_(getMemberSheet_(), normalized);
   if (!member) return { ok: true, found: false, dc: '' };
 
-  const homeDc = member.home.includes('/') ? member.home.split('/')[0] : member.home;
+  const homeParts = member.home.split('/');
+  const homeDc = homeParts[0] || '';
+  const homeWorld = homeParts.length > 1 ? homeParts.slice(1).join('/').trim() : '';
 
   const reservation = findReservationInRows_(readReservations_(getReservationSheet_()), normalized);
   const hasBooking = !!reservation && !!reservation.date && !!reservation.time;
@@ -116,9 +120,11 @@ function member_(name) {
     ok: true,
     found: true,
     dc: ['Elemental','Gaia','Mana','Meteor'].includes(homeDc) ? homeDc : '',
+    world: homeWorld,
     meetingDc: hasBooking && ['Elemental','Gaia','Mana','Meteor'].includes(reservation.meetingDc)
       ? reservation.meetingDc
       : '',
+    meetingWorld: hasBooking ? reservation.meetingWorld || '' : '',
     eligible: member.status === '未招待',
     sourceStatus: member.status,
     canCancel: hasBooking,
@@ -244,6 +250,7 @@ function book_(input) {
       date: input.date,
       time: input.time,
       meetingDc: input.dc || '',
+      meetingWorld: input.world || '',
       useX: !!input.useX,
       xAccount: input.xAccount || '',
       mode: requestedMode
@@ -328,7 +335,12 @@ function readReservations_(sheet) {
 
   const rowCount = lastRow - CONFIG.RES_FIRST_DATA_ROW + 1;
   const values = sheet
-    .getRange(CONFIG.RES_FIRST_DATA_ROW, 1, rowCount, CONFIG.RES_COL_MODE)
+    .getRange(
+      CONFIG.RES_FIRST_DATA_ROW,
+      1,
+      rowCount,
+      Math.max(CONFIG.RES_COL_MODE, CONFIG.RES_COL_MEETING_WORLD)
+    )
     .getDisplayValues();
 
   const rows = [];
@@ -353,7 +365,8 @@ function readReservations_(sheet) {
       })(),
       xAccount: String(values[i][5] || '').trim(),
       updatedAt: String(values[i][6] || '').trim(),
-      mode: String(values[i][9] || '').trim() === '随時受付' ? 'flexible' : 'normal'
+      mode: String(values[i][9] || '').trim() === '随時受付' ? 'flexible' : 'normal',
+      meetingWorld: String(values[i][10] || '').trim()
     });
   }
 
@@ -693,6 +706,11 @@ function reservationFields_(reservation) {
       inline: false
     },
     {
+      name: '集合ワールド',
+      value: reservation.meetingWorld || '(ワールド指定省略)',
+      inline: false
+    },
+    {
       name: 'X利用',
       value: reservation.useX ? 'あり' : 'なし',
       inline: false
@@ -711,6 +729,7 @@ function hasReservationChanged_(before, after) {
     String(before.date || '') !== String(after.date || '') ||
     String(before.time || '') !== String(after.time || '') ||
     String(before.meetingDc || '') !== String(after.meetingDc || '') ||
+    String(before.meetingWorld || '') !== String(after.meetingWorld || '') ||
     !!before.useX !== !!after.useX ||
     String(before.xAccount || '') !== String(after.xAccount || '') ||
     String(before.mode || 'normal') !== String(after.mode || 'normal')
@@ -746,6 +765,11 @@ function notifyDiscordReservationChanged_(before, after) {
       {
         name: '集合DC',
         value: after.meetingDc || '(DC指定省略)',
+        inline: false
+      },
+      {
+        name: '集合ワールド',
+        value: after.meetingWorld || '(ワールド指定省略)',
         inline: false
       },
       {
@@ -797,6 +821,11 @@ function notifyDiscordAutoCancelled_(reservations, maintenance) {
       {
         name: '集合DC',
         value: reservation.meetingDc || '(DC指定省略)',
+        inline: false
+      },
+      {
+        name: '集合ワールド',
+        value: reservation.meetingWorld || '(ワールド指定省略)',
         inline: false
       },
       {
@@ -915,6 +944,9 @@ function upsertReservation_(sheet, existing, data) {
   sheet
     .getRange(targetRow, CONFIG.RES_COL_MODE)
     .setValue(data.mode === 'flexible' ? '随時受付' : '通常予約');
+  sheet
+    .getRange(targetRow, CONFIG.RES_COL_MEETING_WORLD)
+    .setValue(data.meetingWorld || '');
 
   sortReservations_(sheet);
 }
@@ -1046,7 +1078,17 @@ function validateBooking_(input) {
     throw new Error('集合希望DCを選択してください。');
   }
 
+  const needsWorld =
+    needsDc &&
+    input.date === '2026-10-12' &&
+    input.time <= '18:30';
+
+  if (needsWorld && !String(input.world || '').trim()) {
+    throw new Error('集合希望ワールドを選択してください。');
+  }
+
   if (!needsDc) input.dc = '';
+  if (!needsWorld) input.world = '';
 
   if (input.useX) {
     const raw = String(input.xAccount || '').trim();
