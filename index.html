@@ -1145,25 +1145,6 @@ button.slot .support-icon-x{font-size:18px}
         <div class="small">FF14のキャラクターフルネームを入力して「OK」を押してください。</div>
       </div>
 
-      <div id="dcRow" class="row hidden">
-        <label>集合希望DC</label>
-        <input type="hidden" id="dc" value="">
-        <div class="dc-choice-grid" id="dcChoiceGrid" role="radiogroup" aria-label="集合希望DC">
-          <button type="button" class="dc-choice" data-value="Elemental" role="radio" aria-checked="false">Elemental</button>
-          <button type="button" class="dc-choice" data-value="Gaia" role="radio" aria-checked="false">Gaia</button>
-          <button type="button" class="dc-choice" data-value="Mana" role="radio" aria-checked="false">Mana</button>
-          <button type="button" class="dc-choice" data-value="Meteor" role="radio" aria-checked="false">Meteor</button>
-        </div>
-      </div>
-
-      <div id="worldRow" class="row hidden">
-        <label for="world">集合希望ワールド</label>
-        <select id="world">
-          <option value="">ワールドを選択してください</option>
-        </select>
-        <div class="small">ホームワールドを初期値として表示します。必要に応じて変更してください。</div>
-      </div>
-
       <div id="supportMethodPanel" class="support-method-panel hidden">
         <div class="support-method-label">招待・登録サポート方法</div>
         <div class="support-method-grid" role="radiogroup" aria-label="招待・登録サポート方法">
@@ -1187,6 +1168,25 @@ button.slot .support-icon-x{font-size:18px}
         <div id="companionSupportNote" class="support-detail-note hidden">
           リーダーを含む3者専用チャットルームを作成し、その中で招待URLの送付と登録サポートを行います。
         </div>
+      </div>
+
+      <div id="dcRow" class="row hidden">
+        <label>集合希望DC</label>
+        <input type="hidden" id="dc" value="">
+        <div class="dc-choice-grid" id="dcChoiceGrid" role="radiogroup" aria-label="集合希望DC">
+          <button type="button" class="dc-choice" data-value="Elemental" role="radio" aria-checked="false">Elemental</button>
+          <button type="button" class="dc-choice" data-value="Gaia" role="radio" aria-checked="false">Gaia</button>
+          <button type="button" class="dc-choice" data-value="Mana" role="radio" aria-checked="false">Mana</button>
+          <button type="button" class="dc-choice" data-value="Meteor" role="radio" aria-checked="false">Meteor</button>
+        </div>
+      </div>
+
+      <div id="worldRow" class="row hidden">
+        <label for="world">集合希望ワールド</label>
+        <select id="world">
+          <option value="">ワールドを選択してください</option>
+        </select>
+        <div class="small">ホームワールドを初期値として表示します。必要に応じて変更してください。</div>
       </div>
 
       <button id="submitButton" class="primary" type="submit">この日時で予約する</button>
