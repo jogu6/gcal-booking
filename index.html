@@ -849,11 +849,6 @@ button.slot .support-icon-x{font-size:18px}
   cursor:not-allowed;
   filter:grayscale(.6);
 }
-.support-method-card[data-method="x"]:not(:disabled){
-  opacity:1;
-  filter:none;
-  cursor:pointer;
-}
 .support-method-description{
   margin-top:11px;
   color:#cbdbe7;
@@ -1217,7 +1212,7 @@ button.slot .support-icon-x{font-size:18px}
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.15";
+  const EXPECTED_API_VERSION = "2026.10.12.16";
 
   let START_DATE = "2026-10-11";
 
@@ -1399,11 +1394,15 @@ button.slot .support-icon-x{font-size:18px}
 
   function getMaintenanceState(date,time){
     const matches=getMaintenanceMatchesForSlot(date,time);
+    const blockGame=matches.some(period=>period.blockGame);
+    const blockX=matches.some(period=>period.blockX);
+    const blockCompanion=matches.some(period=>period.blockCompanion);
     return {
       matches,
-      closed:matches.some(period=>period.service==="closed"),
-      ff14:matches.some(period=>period.service==="ff14"),
-      companion:matches.some(period=>period.service==="companion")
+      blockGame,
+      blockX,
+      blockCompanion,
+      closed:blockGame && blockX && blockCompanion
     };
   }
 
@@ -1421,9 +1420,9 @@ button.slot .support-icon-x{font-size:18px}
     const state=getMaintenanceState(date,time);
     if(state.closed) return [];
     const methods=[];
-    if(!state.ff14) methods.push("game");
-    methods.push("x");
-    if(!state.companion) methods.push("companion");
+    if(!state.blockGame) methods.push("game");
+    if(!state.blockX) methods.push("x");
+    if(!state.blockCompanion) methods.push("companion");
     return methods;
   }
 
@@ -1492,12 +1491,11 @@ button.slot .support-icon-x{font-size:18px}
 
       const mode=document.createElement("span");
       mode.className="maintenance-period-mode";
-      mode.textContent=
-        period.service==="closed"
-          ? "全面受付停止"
-          : (period.service==="companion"
-              ? "コンパニオンアプリメンテナンス"
-              : "FF14メンテナンス");
+      const stopped=[];
+      if(period.blockGame) stopped.push("ゲーム内");
+      if(period.blockX) stopped.push("X");
+      if(period.blockCompanion) stopped.push("コンパニオン");
+      mode.textContent="停止: "+stopped.join("・");
       row.appendChild(mode);
 
       if(period.message){
@@ -2364,9 +2362,11 @@ button.slot .support-icon-x{font-size:18px}
       }else if(err.code==="MAINTENANCE_X_REQUIRED"){
         showMessage("この時間帯はXでの対応のみ受け付けています。","error");
       }else if(err.code==="MAINTENANCE_FF14"){
-        showMessage("この時間帯はFF14メンテナンスのため、ゲーム内対応を利用できません。別の対応方法を選択してください。","error");
+        showMessage("この時間帯はゲーム内対応を受け付けていません。別の対応方法を選択してください。","error");
+      }else if(err.code==="MAINTENANCE_X"){
+        showMessage("この時間帯はX対応を受け付けていません。別の対応方法を選択してください。","error");
       }else if(err.code==="MAINTENANCE_COMPANION"){
-        showMessage("この時間帯はコンパニオンアプリのメンテナンスのため、コンパニオンアプリ対応を利用できません。別の対応方法を選択してください。","error");
+        showMessage("この時間帯はコンパニオンアプリ対応を受け付けていません。別の対応方法を選択してください。","error");
       }else if(err.code==="MAINTENANCE_CLOSED"){
         const maintenanceKey=selected ? `${selected.date} ${selected.time}` : null;
         await loadSlots();
