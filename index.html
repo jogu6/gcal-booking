@@ -277,6 +277,20 @@ input:not([type="hidden"]):focus{
     0 0 0 2px rgba(89,142,194,.18),
     inset 0 1px 3px rgba(0,0,0,.55);
 }
+#world{
+  width:100%;
+  min-height:48px;
+  padding:10px 12px;
+  border:1px solid rgba(190,207,224,.38);
+  border-radius:7px;
+  background:linear-gradient(180deg,#18212c,#121a23);
+  color:var(--text);
+  outline:none;
+}
+#world:focus{
+  border-color:rgba(156,199,239,.65);
+  box-shadow:0 0 0 2px rgba(89,142,194,.18);
+}
 .chosen{
   padding:12px 14px;
   border:1px solid rgba(184,202,220,.32);
@@ -992,6 +1006,14 @@ button.slot.transition-buffer{
         </div>
       </div>
 
+      <div id="worldRow" class="row hidden">
+        <label for="world">集合希望ワールド</label>
+        <select id="world">
+          <option value="">ワールドを選択してください</option>
+        </select>
+        <div class="small">ホームワールドを初期値として表示します。必要に応じて変更してください。</div>
+      </div>
+
       <div id="xContactPanel" class="x-contact-panel hidden">
         <div id="xPreferenceRow" class="row">
           <label class="x-check-label" for="useX">
@@ -1032,7 +1054,7 @@ button.slot.transition-buffer{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.11";
+  const EXPECTED_API_VERSION = "2026.10.12.12";
 
   let START_DATE = "2026-10-11";
 
@@ -1383,6 +1405,7 @@ button.slot.transition-buffer{
     verifiedMember=false;
     verifiedMemberName="";
     dcRow.classList.add("hidden");
+    worldRow.classList.add("hidden");
     xContactPanel.classList.add("hidden");
     xAccountRow.classList.add("hidden");
     
@@ -1428,13 +1451,23 @@ button.slot.transition-buffer{
       const needsDc=
         !selectedRequiresX &&
         (selected.date==="2026-10-11" || selected.date==="2026-10-12");
+      const needsWorld=
+        needsDc &&
+        selected.date==="2026-10-12" &&
+        selected.time<="18:30";
       if(needsDc){
         dcRow.classList.remove("hidden");
 
-        if(result.meetingDc) setDcValue(result.meetingDc);
-        else if(result.dc) setDcValue(result.dc);
+        const initialDc=result.meetingDc || result.dc || "";
+        const initialWorld=
+          result.meetingWorld ||
+          (initialDc===result.dc ? (result.world || "") : "");
+        setDcValue(initialDc,initialWorld);
+
+        worldRow.classList.toggle("hidden",!needsWorld);
       }else{
         dcRow.classList.add("hidden");
+        worldRow.classList.add("hidden");
         setDcValue("");
       }
 
@@ -1457,6 +1490,7 @@ button.slot.transition-buffer{
       verifiedMember=false;
       verifiedMemberName="";
       document.getElementById("dcRow").classList.add("hidden");
+      worldRow.classList.add("hidden");
       xContactPanel.classList.add("hidden");
       setDcValue("");
       setXEnabled(false);
@@ -1791,6 +1825,7 @@ button.slot.transition-buffer{
     verifiedMember=false;
     verifiedMemberName="";
     dcRow.classList.add("hidden");
+    document.getElementById("worldRow").classList.add("hidden");
     
     setDcValue("");
     setXEnabled(false);
@@ -1803,6 +1838,14 @@ button.slot.transition-buffer{
 
 
   const dcInput=document.getElementById("dc");
+  const worldRow=document.getElementById("worldRow");
+  const worldInput=document.getElementById("world");
+  const WORLDS_BY_DC={
+    Elemental:["Aegis","Atomos","Carbuncle","Garuda","Gungnir","Kujata","Tonberry","Typhon"],
+    Gaia:["Alexander","Bahamut","Durandal","Fenrir","Ifrit","Ridill","Tiamat","Ultima"],
+    Mana:["Anima","Asura","Chocobo","Hades","Ixion","Masamune","Pandaemonium","Titan"],
+    Meteor:["Belias","Mandragora","Ramuh","Shinryu","Unicorn","Valefor","Yojimbo","Zeromus"]
+  };
   const xContactPanel=document.getElementById("xContactPanel");
   const xPreferenceRow=document.getElementById("xPreferenceRow");
   const useX=document.getElementById("useX");
@@ -1826,13 +1869,26 @@ button.slot.transition-buffer{
     if(!useX.checked) xAccountInput.value="";
   });
 
-  function setDcValue(value){
+  function setWorldOptions(dc, preferred=""){
+    const worlds=WORLDS_BY_DC[dc] || [];
+    worldInput.innerHTML='<option value="">ワールドを選択してください</option>';
+    worlds.forEach(world=>{
+      const option=document.createElement("option");
+      option.value=world;
+      option.textContent=world;
+      worldInput.appendChild(option);
+    });
+    worldInput.value=worlds.includes(preferred) ? preferred : "";
+  }
+
+  function setDcValue(value, preferredWorld=""){
     dcInput.value=value || "";
     document.querySelectorAll(".dc-choice").forEach(btn=>{
       const selected=btn.dataset.value===value;
       btn.classList.toggle("selected",selected);
       btn.setAttribute("aria-checked",selected ? "true" : "false");
     });
+    setWorldOptions(value || "",preferredWorld);
   }
 
   document.querySelectorAll(".dc-choice").forEach(btn=>{
@@ -1909,7 +1965,8 @@ button.slot.transition-buffer{
 
       cancelMember=result;
       const dcText=result.meetingDc || result.dc || "DC指定なし";
-      cancelDc.textContent="集合DC: "+dcText;
+      const worldText=result.meetingWorld || "ワールド指定なし";
+      cancelDc.textContent="集合DC: "+dcText+" / 集合ワールド: "+worldText;
       cancelDc.classList.remove("hidden");
       resetCancelConfirm();
 
@@ -1993,6 +2050,16 @@ button.slot.transition-buffer{
       (selected.date==="2026-10-11" || selected.date==="2026-10-12");
     if(needsDc && !dc) return showMessage("集合希望DCを選択してください。","error");
 
+    const needsWorld=
+      needsDc &&
+      selected.date==="2026-10-12" &&
+      selected.time<="18:30";
+    const world=worldInput.value;
+    if(needsWorld && !world){
+      worldInput.focus();
+      return showMessage("集合希望ワールドを選択してください。","error");
+    }
+
     if(selectedRequiresX && !useX.checked){
       return showMessage("メンテナンス時間帯はXでのやりとりを希望する予約のみ受け付けています。","error");
     }
@@ -2017,6 +2084,7 @@ button.slot.transition-buffer{
         time:selected.time,
         name:name,
         dc:dc,
+        world:world,
         useX:useX.checked ? "1" : "0",
         xAccount:xAccount
       },"予約を登録しています…");
@@ -2048,6 +2116,7 @@ button.slot.transition-buffer{
       verifiedMemberName="";
       document.getElementById("characterName").value="";
       setDcValue("");
+      worldRow.classList.add("hidden");
       setXEnabled(false);
       xContactPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
