@@ -849,6 +849,11 @@ button.slot .support-icon-x{font-size:18px}
   cursor:not-allowed;
   filter:grayscale(.6);
 }
+.support-method-card[data-method="x"]:not(:disabled){
+  opacity:1;
+  filter:none;
+  cursor:pointer;
+}
 .support-method-description{
   margin-top:11px;
   color:#cbdbe7;
@@ -1646,7 +1651,10 @@ button.slot .support-icon-x{font-size:18px}
       setDcValue(initialDc,initialWorld);
 
       let initialMethod=result.canCancel ? (result.supportMethod || "") : "";
-      if(!selectedSupportMethods.includes(initialMethod)){
+
+      if(selectedSupportMethods.length===1){
+        initialMethod=selectedSupportMethods[0];
+      }else if(!selectedSupportMethods.includes(initialMethod)){
         initialMethod=selectedSupportMethods.includes("game")
           ? "game"
           : (selectedSupportMethods.includes("x") ? "x" : selectedSupportMethods[0] || "");
@@ -1992,7 +2000,7 @@ button.slot .support-icon-x{font-size:18px}
     document.getElementById("worldRow").classList.add("hidden");
     
     setDcValue("");
-    setSupportMethod("");
+    setSupportMethod(selectedRequiresX ? "x" : "");
     supportMethodPanel.classList.add("hidden");
 
     const card=document.getElementById("formCard");
