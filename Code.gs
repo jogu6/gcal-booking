@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.12.12',
+  APP_VERSION: '2026.10.12.13',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -23,18 +23,19 @@ const CONFIG = {
   MEMBER_COL_HOME: 3,
   MEMBER_COL_STATUS: 4,
 
-  // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC
-  // E=X利用 F=Xアカウント名 G=更新日時 H=対応状況 I=対象者に連絡 J=受付方式 K=集合ワールド
+  // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC E=集合ワールド
+  // F=X利用 G=Xアカウント名 H=更新日時 I=対応状況 J=対象者に連絡 K=受付方式 L=備考
   RES_FIRST_DATA_ROW: 2,
   RES_COL_NAME: 1,
   RES_COL_DATE: 2,
   RES_COL_TIME: 3,
   RES_COL_MEETING_DC: 4,
-  RES_COL_USE_X: 5,
-  RES_COL_X_ACCOUNT: 6,
-  RES_COL_UPDATED_AT: 7,
-  RES_COL_MODE: 10,
-  RES_COL_MEETING_WORLD: 11
+  RES_COL_MEETING_WORLD: 5,
+  RES_COL_USE_X: 6,
+  RES_COL_X_ACCOUNT: 7,
+  RES_COL_UPDATED_AT: 8,
+  RES_COL_MODE: 11,
+  RES_COL_REMARKS: 12
 };
 
 function doGet(e) {
@@ -339,7 +340,7 @@ function readReservations_(sheet) {
       CONFIG.RES_FIRST_DATA_ROW,
       1,
       rowCount,
-      Math.max(CONFIG.RES_COL_MODE, CONFIG.RES_COL_MEETING_WORLD)
+      Math.max(CONFIG.RES_COL_MODE, CONFIG.RES_COL_REMARKS)
     )
     .getDisplayValues();
 
@@ -359,14 +360,15 @@ function readReservations_(sheet) {
         const dcValue = String(values[i][3] || '').trim();
         return dcValue === '(DC指定省略)' ? '' : dcValue;
       })(),
+      meetingWorld: String(values[i][4] || '').trim(),
       useX: (() => {
-        const xValue = String(values[i][4] || '').trim();
+        const xValue = String(values[i][5] || '').trim();
         return xValue.toLowerCase() === 'true' || xValue === 'Xでやりとりを希望' || xValue === '希望します';
       })(),
-      xAccount: String(values[i][5] || '').trim(),
-      updatedAt: String(values[i][6] || '').trim(),
-      mode: String(values[i][9] || '').trim() === '随時受付' ? 'flexible' : 'normal',
-      meetingWorld: String(values[i][10] || '').trim()
+      xAccount: String(values[i][6] || '').trim(),
+      updatedAt: String(values[i][7] || '').trim(),
+      mode: String(values[i][10] || '').trim() === '随時受付' ? 'flexible' : 'normal',
+      remarks: String(values[i][11] || '').trim()
     });
   }
 
@@ -931,6 +933,7 @@ function upsertReservation_(sheet, existing, data) {
     data.date,
     data.time,
     data.meetingDc || '(DC指定省略)',
+    data.meetingWorld || '',
     data.useX ? '希望します' : '',
     data.useX ? data.xAccount : '',
     updatedAt
@@ -940,13 +943,10 @@ function upsertReservation_(sheet, existing, data) {
     ? existing.row
     : Math.max(sheet.getLastRow() + 1, CONFIG.RES_FIRST_DATA_ROW);
 
-  sheet.getRange(targetRow, 1, 1, 7).setValues(rowValues);
+  sheet.getRange(targetRow, 1, 1, 8).setValues(rowValues);
   sheet
     .getRange(targetRow, CONFIG.RES_COL_MODE)
     .setValue(data.mode === 'flexible' ? '随時受付' : '通常予約');
-  sheet
-    .getRange(targetRow, CONFIG.RES_COL_MEETING_WORLD)
-    .setValue(data.meetingWorld || '');
 
   sortReservations_(sheet);
 }
