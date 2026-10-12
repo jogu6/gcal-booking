@@ -283,13 +283,25 @@ input:not([type="hidden"]):focus{
   padding:10px 12px;
   border:1px solid rgba(190,207,224,.38);
   border-radius:7px;
-  background:linear-gradient(180deg,#18212c,#121a23);
-  color:var(--text);
+  background:#17212c;
+  color:#e8eef5;
   outline:none;
+  color-scheme:dark;
 }
 #world:focus{
   border-color:rgba(156,199,239,.65);
   box-shadow:0 0 0 2px rgba(89,142,194,.18);
+}
+#world option{
+  background-color:#17212c;
+  color:#e8eef5;
+}
+#world option:checked{
+  background-color:#345f8c;
+  color:#ffffff;
+}
+#world option:disabled{
+  color:#8ea0b3;
 }
 .chosen{
   padding:12px 14px;
@@ -1872,14 +1884,30 @@ button.slot.transition-buffer{
 
   function setWorldOptions(dc, preferred=""){
     const worlds=WORLDS_BY_DC[dc] || [];
-    worldInput.innerHTML='<option value="">ワールドを選択してください</option>';
+    const preferredWorld=String(preferred || "").trim();
+
+    worldInput.innerHTML="";
+    const placeholder=document.createElement("option");
+    placeholder.value="";
+    placeholder.textContent="ワールドを選択してください";
+    placeholder.disabled=true;
+    worldInput.appendChild(placeholder);
+
+    let matched=false;
     worlds.forEach(world=>{
       const option=document.createElement("option");
       option.value=world;
       option.textContent=world;
+      if(world===preferredWorld){
+        option.selected=true;
+        matched=true;
+      }
       worldInput.appendChild(option);
     });
-    worldInput.value=worlds.includes(preferred) ? preferred : "";
+
+    if(!matched){
+      placeholder.selected=true;
+    }
   }
 
   function setDcValue(value, preferredWorld=""){
