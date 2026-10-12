@@ -1763,7 +1763,7 @@ button.slot .support-icon-x{font-size:18px}
     });
   }
 
-  async function loadSlots(retryCount=0, silent=false){
+  async function loadSlots(retryCount=0, silent=true){
     const loading=document.getElementById("loading");
     try{
       const result=await jsonp(
@@ -2354,7 +2354,7 @@ button.slot .support-icon-x{font-size:18px}
 
       if(err.code==="SLOT_TAKEN" || message.includes("この時間は先に予約されました")){
         const collidedKey=selected ? `${selected.date} ${selected.time}` : null;
-        await loadSlots();
+        await loadSlots(0,true);
         if(collidedKey) scrollToSlot(collidedKey);
         selected=null;
         document.getElementById("formCard").classList.add("hidden");
@@ -2369,7 +2369,7 @@ button.slot .support-icon-x{font-size:18px}
         showMessage("この時間帯はコンパニオンアプリ対応を受け付けていません。別の対応方法を選択してください。","error");
       }else if(err.code==="MAINTENANCE_CLOSED"){
         const maintenanceKey=selected ? `${selected.date} ${selected.time}` : null;
-        await loadSlots();
+        await loadSlots(0,true);
         if(maintenanceKey) scrollToSlot(maintenanceKey);
         selected=null;
         selectedRequiresX=false;
@@ -2379,7 +2379,7 @@ button.slot .support-icon-x{font-size:18px}
         showGlobalNotice("その時間帯は受付停止になりました。別の時刻を選択してください。","error");
       }else if(err.code==="SPECIAL_BUFFER"){
         const transitionKey=selected ? `${selected.date} ${selected.time}` : null;
-        await loadSlots();
+        await loadSlots(0,true);
         if(transitionKey) scrollToSlot(transitionKey);
         selected=null;
         selectedRequiresX=false;
@@ -2396,7 +2396,7 @@ button.slot .support-icon-x{font-size:18px}
     }
   });
 
-  loadSlots();
+  loadSlots(0,true);
 
   setInterval(()=>{
     updateBookingPeriodText();
