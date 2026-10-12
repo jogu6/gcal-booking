@@ -1487,7 +1487,12 @@ button.slot .support-icon-x{font-size:18px}
 
       const mode=document.createElement("span");
       mode.className="maintenance-period-mode";
-      mode.textContent=period.mode==="closed" ? "受付停止" : "Xのみ受付";
+      mode.textContent=
+        period.service==="closed"
+          ? "全面受付停止"
+          : (period.service==="companion"
+              ? "コンパニオンアプリメンテナンス"
+              : "FF14メンテナンス");
       row.appendChild(mode);
 
       if(period.message){
@@ -1520,7 +1525,7 @@ button.slot .support-icon-x{font-size:18px}
       '<li>締切後はアディショナルタイムとなり、新規受付を停止します。</li>'+
       '<li>通常予約開始後は、通常予約の方を優先します。</li>'+
       '<li>状況により、予定より早く受付を終了する場合があります。</li>'+
-      '<li>Xのみ受付と重なる場合は、Xでのやりとりが必須です。</li>'+
+      '<li>メンテナンスと重なる場合は、その時間帯で利用可能なサポート方法だけをアイコン表示します。</li>'+
       '</ul>';
 
     specialReceptionPeriods.forEach(period=>{
