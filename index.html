@@ -1202,11 +1202,11 @@ button.slot .support-icon-x{font-size:18px}
       当日でよろしければ、そちらもサポートさせていただきます。
 
       <div class="auth-links">
-        <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=ja" target="_blank" rel="noopener noreferrer" aria-label="Google PlayでGoogle 認証システムを開く">
-          <img src="https://play.google.com/intl/en_us/badges/static/images/badges/ja_badge_web_generic.png" alt="Google Play で手に入れよう">
+        <a id="googlePlayBadgeLink" class="store-badge" href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=ja" target="_blank" rel="noopener noreferrer" aria-label="Google PlayでGoogle 認証システムを開く">
+          <img id="googlePlayBadgeImage" src="https://play.google.com/intl/en_us/badges/static/images/badges/ja_badge_web_generic.png" alt="Google Play で手に入れよう">
         </a>
-        <a class="store-badge" href="https://apps.apple.com/jp/app/google-authenticator/id388497605" target="_blank" rel="noopener noreferrer" aria-label="App StoreでGoogle Authenticatorを開く">
-          <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ja-jp?size=250x83" alt="App Storeからダウンロード">
+        <a id="appStoreBadgeLink" class="store-badge" href="https://apps.apple.com/jp/app/google-authenticator/id388497605" target="_blank" rel="noopener noreferrer" aria-label="App StoreでGoogle Authenticatorを開く">
+          <img id="appStoreBadgeImage" src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ja-jp?size=250x83" alt="App Storeからダウンロード">
         </a>
         <a class="chrome-auth-link" href="https://chromewebstore.google.com/detail/authenticator/bhghoamapcdpbohphigoooaddinpkbai" target="_blank" rel="noopener noreferrer">
           Authenticator Chrome拡張機能
@@ -1632,11 +1632,45 @@ button.slot .support-icon-x{font-size:18px}
     }
   }
 
+  function updateStoreBadges(){
+    const playLink=document.getElementById("googlePlayBadgeLink");
+    const playImage=document.getElementById("googlePlayBadgeImage");
+    const appLink=document.getElementById("appStoreBadgeLink");
+    const appImage=document.getElementById("appStoreBadgeImage");
+    if(!playLink || !playImage || !appLink || !appImage) return;
+
+    if(currentLang==="en"){
+      playLink.href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=en";
+      playLink.setAttribute("aria-label","Open Google Authenticator on Google Play");
+      playImage.src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png";
+      playImage.alt="Get it on Google Play";
+
+      appLink.href="https://apps.apple.com/us/app/google-authenticator/id388497605";
+      appLink.setAttribute("aria-label","Open Google Authenticator on the App Store");
+      appImage.src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83";
+      appImage.alt="Download on the App Store";
+    }else{
+      playLink.href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=ja";
+      playLink.setAttribute("aria-label","Google PlayでGoogle 認証システムを開く");
+      playImage.src="https://play.google.com/intl/en_us/badges/static/images/badges/ja_badge_web_generic.png";
+      playImage.alt="Google Play で手に入れよう";
+
+      appLink.href="https://apps.apple.com/jp/app/google-authenticator/id388497605";
+      appLink.setAttribute("aria-label","App StoreでGoogle Authenticatorを開く");
+      appImage.src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ja-jp?size=250x83";
+      appImage.alt="App Storeからダウンロード";
+    }
+  }
+
   function setLanguage(lang){
     currentLang=lang==="en" ? "en" : "ja";
     localStorage.setItem("bookingLanguage",currentLang);
     applyLanguage(document.body);
     updateBookingPeriodText();
+    updateStoreBadges();
+    renderMaintenanceSchedule();
+    renderFlexibleReceptionSchedule();
+    applyLanguage(document.body);
 
     if(selected){
       const selectedDate=parseDate(selected.date);
@@ -1931,6 +1965,10 @@ button.slot .support-icon-x{font-size:18px}
     const ms=localStampMs(value);
     if(!Number.isFinite(ms)) return value;
     const d=new Date(ms);
+    if(currentLang==="en"){
+      const date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short",timeZone:"UTC"}).format(d);
+      return date+" "+pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
+    }
     const w=["日","月","火","水","木","金","土"][d.getUTCDay()];
     return `${d.getUTCMonth()+1}/${d.getUTCDate()}(${w}) ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
   }
@@ -1959,10 +1997,10 @@ button.slot .support-icon-x{font-size:18px}
       const mode=document.createElement("span");
       mode.className="maintenance-period-mode";
       const stopped=[];
-      if(period.blockGame) stopped.push("ゲーム内");
+      if(period.blockGame) stopped.push(currentLang==="en" ? "In-game" : "ゲーム内");
       if(period.blockX) stopped.push("X");
-      if(period.blockCompanion) stopped.push("コンパニオン");
-      mode.textContent="停止: "+stopped.join("・");
+      if(period.blockCompanion) stopped.push(currentLang==="en" ? "Companion" : "コンパニオン");
+      mode.textContent=(currentLang==="en" ? "Unavailable: " : "停止: ")+stopped.join(currentLang==="en" ? " / " : "・");
       row.appendChild(mode);
 
       if(period.message){
@@ -2004,10 +2042,13 @@ button.slot .support-icon-x{font-size:18px}
 
       const time=document.createElement("span");
       time.className="flexible-period-time";
-      time.textContent=
-        "随時受付 "+displayMaintenanceStamp(period.start)+
-        " ～ "+displayMaintenanceStamp(period.cutoff)+
-        " / 通常予約開始 "+displayMaintenanceStamp(period.normalStart);
+      time.textContent=currentLang==="en"
+        ? "Flexible reception "+displayMaintenanceStamp(period.start)+
+          " – "+displayMaintenanceStamp(period.cutoff)+
+          " / regular booking starts "+displayMaintenanceStamp(period.normalStart)
+        : "随時受付 "+displayMaintenanceStamp(period.start)+
+          " ～ "+displayMaintenanceStamp(period.cutoff)+
+          " / 通常予約開始 "+displayMaintenanceStamp(period.normalStart);
 
       row.appendChild(time);
 
@@ -2950,6 +2991,7 @@ button.slot .support-icon-x{font-size:18px}
   }
 
   applyLanguage(document.body);
+  updateStoreBadges();
   loadSlots(0,true);
 
   setInterval(()=>{
