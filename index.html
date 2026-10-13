@@ -1066,6 +1066,45 @@ button.slot .support-icon-x{font-size:18px}
   cursor:pointer;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.20),0 2px 7px rgba(0,0,0,.28);
 }
+.language-switch{
+  position:fixed;
+  top:10px;
+  right:10px;
+  z-index:10050;
+  display:flex;
+  padding:3px;
+  border:1px solid rgba(205,216,226,.34);
+  border-radius:9px;
+  background:rgba(24,31,40,.90);
+  box-shadow:0 5px 18px rgba(0,0,0,.30);
+  backdrop-filter:blur(5px);
+}
+.language-switch button{
+  min-width:46px;
+  min-height:34px;
+  padding:6px 10px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:#cbd5df;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+.language-switch button.active{
+  background:linear-gradient(180deg,#6f9ecf 0%,#507bab 48%,#3b608d 100%);
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+}
+.language-switch button:focus-visible{
+  outline:2px solid #ffe08a;
+  outline-offset:2px;
+}
+@media(max-width:600px){
+  .language-switch{top:7px;right:7px}
+  .language-switch button{min-width:42px;min-height:32px;padding:5px 8px}
+}
 #formCard{position:relative;z-index:20}
 @media(max-width:600px){
   .auth-links{justify-content:center;column-gap:14px;row-gap:12px}
@@ -1090,6 +1129,10 @@ button.slot .support-icon-x{font-size:18px}
   <!-- pages-redeploy-2 -->
 </head>
 <body>
+<div class="language-switch" role="group" aria-label="Language">
+  <button id="langJa" type="button" class="active" aria-pressed="true">日本語</button>
+  <button id="langEn" type="button" aria-pressed="false">EN</button>
+</div>
 <div id="processingOverlay" class="processing-overlay hidden" aria-live="polite" aria-busy="true">
   <div class="processing-box">
     <div class="processing-spinner" aria-hidden="true"></div>
@@ -1330,6 +1373,291 @@ button.slot .support-icon-x{font-size:18px}
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
   const EXPECTED_API_VERSION = "2026.10.13.17";
 
+  let currentLang=localStorage.getItem("bookingLanguage")==="en" ? "en" : "ja";
+  const I18N_EN={
+    "処理中です…":"Processing…",
+    "予約前の重要事項":"Important information before booking",
+    "予約枠は30分":"Each booking slot is 30 minutes",
+    "で、待機時間と登録サポート時間を含みます。":"including both waiting time and registration support.",
+    "予約時刻までに、選択した方法ですぐ対応できる状態にしてください。":"Please be ready to respond immediately through your selected support method by your booking time.",
+    "予約時刻から10分以内に応答・合流できない場合はキャンセル扱い":"If you do not respond or join within 10 minutes of your booking time, the booking will be treated as canceled",
+    "となります。":".",
+    "この10分ルールは、ゲーム内・X・コンパニオンアプリのすべてに共通です。":"This 10-minute rule applies to in-game, X, and the Companion App.",
+    "予約時刻を忘れないよう、スマホのアラームやリマインダーの併用をおすすめします。":"We recommend setting a phone alarm or reminder so you do not miss your booking time.",
+    "Xの":"On X,",
+    "DMとチャットは同じ意味":"DM and chat mean the same thing",
+    "として扱います。どちらか一方だけを確認していたことは未応答の理由として扱いません。":"on this page. Checking only one of them will not be treated as a reason for not responding.",
+    "上記を確認し、予約時刻から10分以内に応答・合流できない場合はキャンセル扱いとなることを確認しました。":"I have read the above and understand that my booking will be treated as canceled if I do not respond or join within 10 minutes of the booking time.",
+    "確認して予約する":"Confirm and book",
+    "閉じる":"Close",
+    "「閉じる」はいつでも押せます。未確認のまま閉じた場合は、予約入力を破棄して日時選択前の状態に戻ります。":"You can close this dialog at any time. If you close it without checking the confirmation box, your booking entries will be discarded and you will return to the time-selection stage.",
+    "予約しました。":"Booking confirmed.",
+    "当日はよろしくお願いします。":"We look forward to assisting you.",
+    "予約を取り消しました。":"Your booking has been canceled.",
+    "くまたんグループ 招待&登録":"Kumatan Group Invitation & Registration",
+    "(FF14 ver.) 予約フォーム":"(FF14 ver.) Booking Form",
+    "登録作業を1対1でサポートするための予約ページです。":"This page is for booking one-on-one support with the registration process.",
+    "予約受付期間：":"Booking period:",
+    "計算中…":"Calculating…",
+    "期間外をご希望の方は、リーダーもしくは私 Og Og までご連絡ください。":"If you need a time outside the booking period, please contact the leader or Og Og.",
+    "対応時間：":"Support hours:",
+    "09:00～23:00（30分単位）":"09:00–23:00 (30-minute slots)",
+    "臨時メンテナンスについて":"Temporary maintenance",
+    "FF14・X・コンパニオンアプリは、それぞれ個別に受付停止となる場合があります。":"In-game, X, and Companion App support may each be suspended separately.",
+    "予約枠には、その時間帯で実際に利用できるサポート方法だけをアイコンで表示します。":"Each time slot shows icons only for the support methods currently available.",
+    "すべての方法が停止している時間帯は「受付停止」となります。":"If all methods are unavailable, the slot is shown as “Unavailable.”",
+    "対象時間帯の既存予約も、選択済みの対応方法が利用できなくなった場合は自動的にキャンセルされます。":"Existing bookings are automatically canceled if their selected support method becomes unavailable for that time.",
+    "事前準備のおすすめ":"Recommended preparation",
+    "事前にスマホなら Google 認証システム(Authenticator) アプリ、PCなら Authenticator Chrome拡張機能をインストールしていただくことをお勧めします。":"We recommend installing Google Authenticator on your phone, or the Authenticator Chrome extension on PC, in advance.",
+    "当日でよろしければ、そちらもサポートさせていただきます。":"If needed, we can also help you set it up on the day.",
+    "Authenticator Chrome拡張機能":"Authenticator Chrome extension",
+    "招待・登録サポート方法":"Invitation & registration support method",
+    "予約時間ごとに、利用できるサポート方法をアイコンで表示します。":"Available support methods are shown as icons for each booking time.",
+    "ゲーム内":"In-game",
+    "ではFF14内でパーティを組み、招待URLをお送りします。":": We will form a party in FF14 and send you the invitation URL.",
+    "ではXのDM（チャット）で招待・登録をサポートします。DMとチャットは同じ意味として扱います。事前に @og_ff14 とやりとりできる状態をご確認ください。":": We will support the invitation and registration through X DM (chat). “DM” and “chat” mean the same thing here. Please make sure you can communicate with @og_ff14 in advance.",
+    "コンパニオンアプリ":"Companion App",
+    "コンパニオン":"Companion",
+    "では、リーダーを含む3者専用チャットルームを作成し、その中で招待・登録をサポートします。":": We will create a private three-person chat room including the leader and support your invitation and registration there.",
+    "予約枠には、その時間帯で利用できる方法だけをアイコンで表示します。":"Only methods available for that time are shown as icons.",
+    "当日の流れ":"What to expect",
+    "予約枠は30分です。待機時間と登録サポートの時間を含みます。":"Each booking slot is 30 minutes, including waiting time and registration support.",
+    "予約時刻から10分以内に応答・合流が確認できない場合は、ゲーム内・X・コンパニオンアプリのいずれでも予約をキャンセル扱いとします。":"For all support methods, the booking will be treated as canceled if we cannot confirm your response or arrival within 10 minutes of the booking time.",
+    "予約時刻までに、選択したサポート方法ですぐ対応できる状態にしてください。":"Please be ready to respond through your selected support method by your booking time.",
+    "ゲーム内対応はFF14へログインし、指定がある場合は集合DC・ワールドへ移動してください。":"For in-game support, log in to FF14 and move to the specified DC/world if instructed.",
+    "X対応はXのDM（チャット）をご確認ください。DMとチャットは同じ意味として扱います。":"For X support, check your X DM (chat). “DM” and “chat” mean the same thing here.",
+    "コンパニオンアプリ対応は、リーダーを含む3者専用チャットルームをご確認ください。":"For Companion App support, check the private three-person chat room including the leader.",
+    "招待URLから登録し、正常にログインできるところまでサポートします。":"We will support you from registration through the invitation URL until you can log in successfully.",
+    "ゲーム内対応：":"In-game support:",
+    "10月11日・12日は集合希望DCを指定してください。10月12日の18:30枠までは集合希望ワールドも必須です。":"For Oct. 11–12, select the meeting DC. For slots through 18:30 on Oct. 12, a meeting world is also required.",
+    "X・コンパニオンアプリ対応：":"X / Companion App support:",
+    "集合DC・ワールドの指定は不要です。":"No meeting DC/world selection is required.",
+    "予約済みの枠には時間帯だけ「予約済み」と表示します。予約者のキャラクター名やDCなどは他の方には表示されません。":"Booked slots show only the time and “Booked.” Character names, DCs, and other booking details are not shown to other users.",
+    "変更したい場合":"To change a booking",
+    "再度、予約の操作を行ってください。":"Make a new booking using the form again.",
+    "取り消したい場合":"To cancel",
+    "画面下の取消欄へ移動":"Go to the cancellation section",
+    "して、お名前を入力後「予約を検索します」ボタンを押してください。":", enter your name, then press “Find my booking.”",
+    "希望日時を選択":"Select a date and time",
+    "予約状況を読み込んでいます…":"Loading booking availability…",
+    "予約内容":"Booking details",
+    "希望日時":"Selected date and time",
+    "この時間帯は随時受付です。":"This time is open for flexible reception.",
+    "同一時間帯に複数名が予約できます。":"Multiple people may book the same time slot.",
+    "選択時刻は対応開始の目安です。":"The selected time is an approximate support start time.",
+    "混雑時はお待ちいただく場合があります。":"You may need to wait during busy periods.",
+    "通常予約の開始後は、通常予約の方を優先します。":"Once regular bookings begin, regular bookings take priority.",
+    "状況により、予定より早く受付を終了する場合があります。":"Reception may close earlier than scheduled depending on conditions.",
+    "キャラクターフルネーム":"Character full name",
+    "FF14のキャラクターフルネームを入力して「OK」を押してください。":"Enter your full FF14 character name and press “OK.”",
+    "X アカウント名":"X account name",
+    "半角英数字と「_」のみ。@は付けても付けなくても構いません。事前に @og_ff14 とDM（チャット）でやりとりできる状態をご確認ください。":"Use letters, numbers, and “_” only. You may include or omit @. Please make sure you can communicate with @og_ff14 by DM (chat) in advance.",
+    "リーダーを含む3者専用チャットルームを作成し、その中で招待URLの送付と登録サポートを行います。":"We will create a private three-person chat room including the leader, send the invitation URL there, and support your registration.",
+    "集合希望DC":"Meeting DC",
+    "集合希望ワールド":"Meeting world",
+    "ワールドを選択してください":"Select a world",
+    "ホームワールドを初期値として表示します。必要に応じて変更してください。":"Your home world is selected by default. Change it if needed.",
+    "この日時で予約する":"Book this time",
+    "予約の取り消し":"Cancel a booking",
+    "予約時に入力したキャラクターフルネームを入力してください。":"Enter the full character name used for the booking.",
+    "予約を検索します":"Find my booking",
+    "現在のメンテナンス予定":"Current maintenance schedule",
+    "停止: ":"Unavailable: ",
+    "随時受付について":"About flexible reception",
+    "締切後はアディショナルタイムとなり、新規受付を停止します。":"After the cutoff, the slot enters Additional Time and new bookings stop.",
+    "通常予約開始後は、通常予約の方を優先します。":"Once regular booking begins, regular bookings take priority.",
+    "メンテナンスと重なる場合は、その時間帯で利用可能なサポート方法だけをアイコン表示します。":"If maintenance overlaps, only support methods available for that time are shown as icons.",
+    "随時受付 ":"Flexible reception ",
+    " / 通常予約開始 ":" / regular booking starts ",
+    "キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。":"Enter the character full name in the format “Aaaa Bbbb.”",
+    "メンバー情報を確認しています…":"Checking member information…",
+    "名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。":"The name does not match. Please check the full character name registered in the member list.",
+    "このキャラクターは現在予約できません。":"This character cannot make a booking at this time.",
+    "登録完了":"Registration complete",
+    "このキャラクターはすでに登録完了しています。":"This character has already completed registration.",
+    "招待不要":"Invitation not required",
+    "このキャラクターは今回の予約対象ではありません。サブキャラの場合は、メインキャラでご予約ください。":"This character is not eligible for this booking. If this is an alt character, please book using your main character.",
+    "招待済み":"Already invited",
+    "このキャラクターはすでに招待済みです。":"This character has already been invited.",
+    "名前の確認に失敗しました。もう一度お試しください。":"Could not verify the name. Please try again.",
+    "API URLが未設定です":"The API URL is not configured.",
+    "通信がタイムアウトしました":"The request timed out.",
+    "予約システムのバージョンが一致しません。管理者がApps Scriptを最新版へデプロイする必要があります。":"The booking system versions do not match. The administrator needs to deploy the latest Apps Script version.",
+    "予約サーバーへ接続できませんでした":"Could not connect to the booking server.",
+    "予約状況を取得できませんでした":"Could not load booking availability.",
+    "予約状況を取得できません。再読み込みしてください。":"Could not load booking availability. Please reload the page.",
+    "予約済み":"Booked",
+    "受付停止":"Unavailable",
+    "アディショナルタイム":"Additional Time",
+    "受付開始前":"Not open yet",
+    "受付終了":"Closed",
+    "随時受付":"Flexible",
+    "予約時刻にXのDM（チャット）をご確認ください。":"Please check your X DM (chat) at your booking time.",
+    "10分以内に応答がない場合はキャンセル扱いとなります。":"If you do not respond within 10 minutes, the booking will be treated as canceled.",
+    "コンパニオンアプリの3者専用チャットルームでご案内します。":"We will assist you in the Companion App three-person chat room.",
+    "当日はゲーム内でよろしくお願いします。":"Please meet us in-game at your booking time.",
+    "FF14ゲーム内でパーティを組み、招待URLをお送りします。":"We will form a party in FF14 and send you the invitation URL.",
+    "XのDM（チャット）で招待・登録をサポートします。DMとチャットは同じ意味として扱います。":"We will support the invitation and registration through X DM (chat). “DM” and “chat” mean the same thing here.",
+    "コンパニオンアプリの3者専用チャットルームで招待・登録をサポートします。":"We will support the invitation and registration in the Companion App three-person chat room.",
+    "予約情報を確認しています…":"Checking booking information…",
+    "取り消せる予約がありません。":"There is no booking that can be canceled.",
+    "DC指定なし":"No DC specified",
+    "ワールド指定なし":"No world specified",
+    "対応方法: ":"Support method: ",
+    " / 集合DC: ":" / Meeting DC: ",
+    " / 集合ワールド: ":" / Meeting world: ",
+    "予約情報の確認に失敗しました。もう一度お試しください。":"Could not check the booking. Please try again.",
+    "予約を取り消してよろしいですか?":"Cancel this booking?",
+    "予約を取り消しています…":"Canceling booking…",
+    "予約を取り消せませんでした。":"Could not cancel the booking.",
+    "希望日時を選択してください。":"Please select a date and time.",
+    "キャラクター名を入力して「OK」で確認してください。":"Enter your character name and confirm it with “OK.”",
+    "この時間帯で利用する招待・登録サポート方法を選択してください。":"Select the invitation and registration support method for this time.",
+    "ゲーム内対応では、集合希望DCを選択してください。":"For in-game support, select a meeting DC.",
+    "ゲーム内対応では、集合希望ワールドを選択してください。":"For in-game support, select a meeting world.",
+    "X アカウント名が正しくありません。@og_ff14 のように入力してください。":"The X account name is invalid. Enter it like @og_ff14.",
+    "予約しています…":"Booking…",
+    "予約を登録しています…":"Registering booking…",
+    "予約できませんでした":"Could not make the booking.",
+    "予約できませんでした。":"Could not make the booking.",
+    "その時刻は他の方に先に予約されました。別の時刻を選択してください。":"That time was booked by someone else. Please choose another time.",
+    "この時間帯はXでの対応のみ受け付けています。":"Only X support is available for this time.",
+    "この時間帯はゲーム内対応を受け付けていません。別の対応方法を選択してください。":"In-game support is unavailable for this time. Please choose another method.",
+    "この時間帯はX対応を受け付けていません。別の対応方法を選択してください。":"X support is unavailable for this time. Please choose another method.",
+    "この時間帯はコンパニオンアプリ対応を受け付けていません。別の対応方法を選択してください。":"Companion App support is unavailable for this time. Please choose another method.",
+    "その時間帯は受付停止になりました。別の時刻を選択してください。":"That time is no longer available. Please choose another time.",
+    "その時間帯は通常予約へ切り替えるためのアディショナルタイムです。別の時刻を選択してください。":"That time is Additional Time before regular bookings begin. Please choose another time.",
+    "予約を取り消す":"Cancel booking",
+    "予約を取り消してよろしいですか?":"Cancel this booking?"
+  };
+
+  const originalTextByNode=new WeakMap();
+  const originalAttrsByEl=new WeakMap();
+
+  function translateDynamicText(source){
+    if(currentLang!=="en") return source;
+    const s=String(source);
+    const trimmed=s.trim();
+    if(I18N_EN[trimmed]){
+      return s.replace(trimmed,I18N_EN[trimmed]);
+    }
+
+    let m=trimmed.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+    if(m){
+      const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+      return s.replace(trimmed,new Intl.DateTimeFormat("en-US",{year:"numeric",month:"short",day:"numeric"}).format(d));
+    }
+
+    m=trimmed.match(/^(\d{1,2})月(\d{1,2})日（([日月火水木金土])）$/);
+    if(m){
+      const weekdays={日:"Sun",月:"Mon",火:"Tue",水:"Wed",木:"Thu",金:"Fri",土:"Sat"};
+      const month=new Intl.DateTimeFormat("en-US",{month:"short"}).format(new Date(2026,Number(m[1])-1,1));
+      return s.replace(trimmed,month+" "+Number(m[2])+" ("+weekdays[m[3]]+")");
+    }
+
+    m=trimmed.match(/^(\d{2}:\d{2}) 予約済み$/);
+    if(m) return s.replace(trimmed,m[1]+" Booked");
+    m=trimmed.match(/^(\d{2}:\d{2}) 受付停止$/);
+    if(m) return s.replace(trimmed,m[1]+" Unavailable");
+    m=trimmed.match(/^(\d{2}:\d{2}) アディショナルタイム$/);
+    if(m) return s.replace(trimmed,m[1]+" Additional Time");
+    m=trimmed.match(/^(\d{2}:\d{2}) 受付開始前$/);
+    if(m) return s.replace(trimmed,m[1]+" Not open yet");
+    m=trimmed.match(/^(\d{2}:\d{2}) 受付終了$/);
+    if(m) return s.replace(trimmed,m[1]+" Closed");
+    m=trimmed.match(/^(\d{2}:\d{2}) 随時受付$/);
+    if(m) return s.replace(trimmed,m[1]+" Flexible");
+    m=trimmed.match(/^(\d+)名予約済み$/);
+    if(m) return s.replace(trimmed,m[1]+" booked");
+    m=trimmed.match(/^通信がタイムアウトしました。自動再読み込みしています…（(\d+)\/3）$/);
+    if(m) return s.replace(trimmed,"The request timed out. Reloading automatically… ("+m[1]+"/3)");
+    m=trimmed.match(/^(.+) の予約を取り消す$/);
+    if(m) return s.replace(trimmed,"Cancel booking: "+m[1]);
+
+    return source;
+  }
+
+  function translateTextNode(node){
+    if(!originalTextByNode.has(node)){
+      originalTextByNode.set(node,node.nodeValue);
+    }else if(currentLang==="en" && /[ぁ-んァ-ン一-龯]/.test(node.nodeValue || "")){
+      // Dynamic UI text may be rewritten in Japanese after a refresh.
+      originalTextByNode.set(node,node.nodeValue);
+    }
+    const source=originalTextByNode.get(node);
+    node.nodeValue=currentLang==="en" ? translateDynamicText(source) : source;
+  }
+
+  function translateElementAttrs(el){
+    const attrs=["placeholder","title","aria-label"];
+    if(!originalAttrsByEl.has(el)){
+      const original={};
+      attrs.forEach(a=>{ if(el.hasAttribute(a)) original[a]=el.getAttribute(a); });
+      originalAttrsByEl.set(el,original);
+    }
+    const original=originalAttrsByEl.get(el);
+    Object.keys(original).forEach(a=>{
+      el.setAttribute(a,currentLang==="en" ? translateDynamicText(original[a]) : original[a]);
+    });
+  }
+
+  function applyLanguage(root=document.body){
+    document.documentElement.lang=currentLang==="en" ? "en" : "ja";
+    document.title=currentLang==="en"
+      ? "Kumatan Group Invitation & Registration | Booking"
+      : "くまたんグループ 招待&登録 (FF14 ver.) 予約フォーム";
+
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    let node;
+    while((node=walker.nextNode())){
+      if(node.parentElement && !["SCRIPT","STYLE"].includes(node.parentElement.tagName)){
+        translateTextNode(node);
+      }
+    }
+    if(root.nodeType===1) translateElementAttrs(root);
+    root.querySelectorAll?.("*").forEach(translateElementAttrs);
+
+    const ja=document.getElementById("langJa");
+    const en=document.getElementById("langEn");
+    if(ja && en){
+      ja.classList.toggle("active",currentLang==="ja");
+      en.classList.toggle("active",currentLang==="en");
+      ja.setAttribute("aria-pressed",currentLang==="ja" ? "true" : "false");
+      en.setAttribute("aria-pressed",currentLang==="en" ? "true" : "false");
+    }
+  }
+
+  function setLanguage(lang){
+    currentLang=lang==="en" ? "en" : "ja";
+    localStorage.setItem("bookingLanguage",currentLang);
+    applyLanguage(document.body);
+    updateBookingPeriodText();
+    renderMaintenanceSchedule();
+    renderFlexibleReceptionSchedule();
+    renderCalendar();
+    if(selected){
+      const selectedButton=document.querySelector('.slot.selected');
+      if(selectedButton) selectSlot(selected.date,selected.time,selectedButton);
+    }
+    setTimeout(()=>applyLanguage(document.body),0);
+  }
+
+  document.getElementById("langJa").addEventListener("click",()=>setLanguage("ja"));
+  document.getElementById("langEn").addEventListener("click",()=>setLanguage("en"));
+
+  const languageObserver=new MutationObserver(mutations=>{
+    if(currentLang!=="en") return;
+    let needsApply=false;
+    for(const mutation of mutations){
+      if(mutation.type==="characterData" || mutation.addedNodes.length){
+        needsApply=true;
+        break;
+      }
+    }
+    if(needsApply) queueMicrotask(()=>applyLanguage(document.body));
+  });
+  languageObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
+
   let START_DATE = "2026-10-11";
 
   const scrollToCancel=document.getElementById("scrollToCancel");
@@ -1362,6 +1690,9 @@ button.slot .support-icon-x{font-size:18px}
 
   function displayPeriodDate(s){
     const d=parseDate(s);
+    if(currentLang==="en"){
+      return new Intl.DateTimeFormat("en-US",{year:"numeric",month:"short",day:"numeric"}).format(d);
+    }
     return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
   }
 
@@ -1406,6 +1737,9 @@ button.slot .support-icon-x{font-size:18px}
 
   function displayDate(s){
     const d = parseDate(s);
+    if(currentLang==="en"){
+      return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short"}).format(d);
+    }
     const w = ["日","月","火","水","木","金","土"][d.getDay()];
     return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;
   }
@@ -2158,9 +2492,15 @@ button.slot .support-icon-x{font-size:18px}
     if(selectedDate.getDay()===0) selectedWeekdayClass=" sunday";
     if(HOLIDAYS.has(date)) selectedWeekdayClass=" holiday";
 
-    document.getElementById("selectedText").innerHTML=
-      `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`+
-      (selectedFlexible ? "（随時受付）" : "");
+    if(currentLang==="en"){
+      const englishDate=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short"}).format(selectedDate);
+      document.getElementById("selectedText").textContent=
+        englishDate+" "+time+" – "+endTime(time)+(selectedFlexible ? " (Flexible)" : "");
+    }else{
+      document.getElementById("selectedText").innerHTML=
+        `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`+
+        (selectedFlexible ? "（随時受付）" : "");
+    }
 
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
@@ -2592,6 +2932,7 @@ button.slot .support-icon-x{font-size:18px}
     }
   }
 
+  applyLanguage(document.body);
   loadSlots(0,true);
 
   setInterval(()=>{
