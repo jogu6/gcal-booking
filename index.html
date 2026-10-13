@@ -1139,7 +1139,7 @@ button.slot .support-icon-x{font-size:18px}
     <div class="notice">
       <strong>予約受付期間：</strong><span id="bookingPeriodText">計算中…</span><br>
       <span class="small">期間外をご希望の方は、リーダーもしくは私 Og Og までご連絡ください。</span><br>
-      <strong>対応時間：</strong>08:00～24:00（30分単位）
+      <strong>対応時間：</strong>09:00～23:00（30分単位）
     </div>
 
     <div class="maintenance-policy-note">
@@ -1328,7 +1328,7 @@ button.slot .support-icon-x{font-size:18px}
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.12.16";
+  const EXPECTED_API_VERSION = "2026.10.13.17";
 
   let START_DATE = "2026-10-11";
 
@@ -1397,7 +1397,7 @@ button.slot .support-icon-x{font-size:18px}
       return;
     }
 
-    const latest={date:END_DATE,time:"23:30"};
+    const latest={date:END_DATE,time:"22:30"};
     el.textContent=
       displayPeriodDate(earliest.date)+" "+earliest.time+
       " ～ "+
@@ -1419,7 +1419,7 @@ button.slot .support-icon-x{font-size:18px}
 
   function allTimes(){
     const a=[];
-    for(let n=8*60;n<24*60;n+=30){
+    for(let n=9*60;n<23*60;n+=30){
       a.push(`${pad2(Math.floor(n/60))}:${pad2(n%60)}`);
     }
     return a;
