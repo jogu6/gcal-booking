@@ -1206,7 +1206,7 @@ button.slot .support-icon-x{font-size:18px}
         <a id="appStoreBadgeLink" class="store-badge" href="https://apps.apple.com/jp/app/google-authenticator/id388497605" target="_blank" rel="noopener noreferrer" aria-label="App StoreでGoogle Authenticatorを開く">
           <img id="appStoreBadgeImage" src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ja-jp?size=250x83" alt="App Storeからダウンロード">
         </a>
-        <a class="chrome-auth-link" href="https://chromewebstore.google.com/detail/authenticator/bhghoamapcdpbohphigoooaddinpkbai" target="_blank" rel="noopener noreferrer">
+        <a id="chromeAuthenticatorLink" class="chrome-auth-link" href="https://chromewebstore.google.com/detail/authenticator/bhghoamapcdpbohphigoooaddinpkbai?hl=ja" target="_blank" rel="noopener noreferrer">
           Authenticator Chrome拡張機能
         </a>
       </div>
@@ -1635,7 +1635,8 @@ button.slot .support-icon-x{font-size:18px}
     const playImage=document.getElementById("googlePlayBadgeImage");
     const appLink=document.getElementById("appStoreBadgeLink");
     const appImage=document.getElementById("appStoreBadgeImage");
-    if(!playLink || !playImage || !appLink || !appImage) return;
+    const chromeLink=document.getElementById("chromeAuthenticatorLink");
+    if(!playLink || !playImage || !appLink || !appImage || !chromeLink) return;
 
     if(currentLang==="en"){
       playLink.href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=en";
@@ -1647,6 +1648,7 @@ button.slot .support-icon-x{font-size:18px}
       appLink.setAttribute("aria-label","Open Google Authenticator on the App Store");
       appImage.src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83";
       appImage.alt="Download on the App Store";
+      chromeLink.href="https://chromewebstore.google.com/detail/authenticator/bhghoamapcdpbohphigoooaddinpkbai?hl=en";
     }else{
       playLink.href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=ja";
       playLink.setAttribute("aria-label","Google PlayでGoogle 認証システムを開く");
@@ -1657,6 +1659,7 @@ button.slot .support-icon-x{font-size:18px}
       appLink.setAttribute("aria-label","App StoreでGoogle Authenticatorを開く");
       appImage.src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ja-jp?size=250x83";
       appImage.alt="App Storeからダウンロード";
+      chromeLink.href="https://chromewebstore.google.com/detail/authenticator/bhghoamapcdpbohphigoooaddinpkbai?hl=ja";
     }
   }
 
