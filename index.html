@@ -1369,7 +1369,7 @@ button.slot .support-icon-x{font-size:18px}
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.13.17";
+  const EXPECTED_API_VERSION = "2026.10.13.18";
 
   let currentLang=localStorage.getItem("bookingLanguage")==="en" ? "en" : "ja";
   const I18N_EN={
@@ -2903,7 +2903,8 @@ button.slot .support-icon-x{font-size:18px}
         dc:request.dc,
         world:request.world,
         supportMethod:request.supportMethod,
-        contact:request.contact
+        contact:request.contact,
+        lang:currentLang
       },"予約を登録しています…");
 
       if(!result.ok){
