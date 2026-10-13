@@ -1130,7 +1130,7 @@ button.slot .support-icon-x{font-size:18px}
 </head>
 <body>
 <div class="language-switch" role="group" aria-label="Language">
-  <button id="langJa" type="button" class="active" aria-pressed="true">日本語</button>
+  <button id="langJa" type="button" class="active" aria-pressed="true">JA</button>
   <button id="langEn" type="button" aria-pressed="false">EN</button>
 </div>
 <div id="processingOverlay" class="processing-overlay hidden" aria-live="polite" aria-busy="true">
@@ -1414,6 +1414,9 @@ button.slot .support-icon-x{font-size:18px}
     "招待・登録サポート方法":"Invitation & registration support method",
     "予約時間ごとに、利用できるサポート方法をアイコンで表示します。":"Available support methods are shown as icons for each booking time.",
     "ゲーム内":"In-game",
+    "ゲーム内対応":"In-game support",
+    "X対応":"X support",
+    "コンパニオンアプリ対応":"Companion App support",
     "ではFF14内でパーティを組み、招待URLをお送りします。":": We will form a party in FF14 and send you the invitation URL.",
     "ではXのDM（チャット）で招待・登録をサポートします。DMとチャットは同じ意味として扱います。事前に @og_ff14 とやりとりできる状態をご確認ください。":": We will support the invitation and registration through X DM (chat). “DM” and “chat” mean the same thing here. Please make sure you can communicate with @og_ff14 in advance.",
     "コンパニオンアプリ":"Companion App",
@@ -1585,7 +1588,8 @@ button.slot .support-icon-x{font-size:18px}
       originalTextByNode.set(node,node.nodeValue);
     }
     const source=originalTextByNode.get(node);
-    node.nodeValue=currentLang==="en" ? translateDynamicText(source) : source;
+    const next=currentLang==="en" ? translateDynamicText(source) : source;
+    if(node.nodeValue!==next) node.nodeValue=next;
   }
 
   function translateElementAttrs(el){
@@ -1597,7 +1601,8 @@ button.slot .support-icon-x{font-size:18px}
     }
     const original=originalAttrsByEl.get(el);
     Object.keys(original).forEach(a=>{
-      el.setAttribute(a,currentLang==="en" ? translateDynamicText(original[a]) : original[a]);
+      const next=currentLang==="en" ? translateDynamicText(original[a]) : original[a];
+      if(el.getAttribute(a)!==next) el.setAttribute(a,next);
     });
   }
 
@@ -1632,13 +1637,25 @@ button.slot .support-icon-x{font-size:18px}
     localStorage.setItem("bookingLanguage",currentLang);
     applyLanguage(document.body);
     updateBookingPeriodText();
-    renderMaintenanceSchedule();
-    renderFlexibleReceptionSchedule();
-    renderCalendar();
+
     if(selected){
-      const selectedButton=document.querySelector('.slot.selected');
-      if(selectedButton) selectSlot(selected.date,selected.time,selectedButton);
+      const selectedDate=parseDate(selected.date);
+      if(currentLang==="en"){
+        const englishDate=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short"}).format(selectedDate);
+        document.getElementById("selectedText").textContent=
+          englishDate+" "+selected.time+" – "+endTime(selected.time)+(selectedFlexible ? " (Flexible)" : "");
+      }else{
+        const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
+        let selectedWeekdayClass="";
+        if(selectedDate.getDay()===6) selectedWeekdayClass=" saturday";
+        if(selectedDate.getDay()===0) selectedWeekdayClass=" sunday";
+        if(HOLIDAYS.has(selected.date)) selectedWeekdayClass=" holiday";
+        document.getElementById("selectedText").innerHTML=
+          `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${selected.time} ～ ${endTime(selected.time)}`+
+          (selectedFlexible ? "（随時受付）" : "");
+      }
     }
+
     setTimeout(()=>applyLanguage(document.body),0);
   }
 
