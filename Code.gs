@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.13.17',
+  APP_VERSION: '2026.10.13.18',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -79,7 +79,8 @@ function doGet(e) {
         dc: e.parameter.dc || '',
         world: e.parameter.world || '',
         supportMethod: e.parameter.supportMethod || (e.parameter.useX === '1' ? 'x' : 'game'),
-        contact: e.parameter.contact || e.parameter.xAccount || ''
+        contact: e.parameter.contact || e.parameter.xAccount || '',
+        language: e.parameter.lang === 'en' ? 'en' : 'ja'
       });
     } else if (action === 'cancel') {
       result = cancel_(e.parameter.name);
@@ -274,7 +275,9 @@ function book_(input) {
       contact: input.contact || '',
       useX: input.supportMethod === 'x',
       xAccount: input.supportMethod === 'x' ? (input.contact || '') : '',
-      mode: requestedMode
+      mode: requestedMode,
+      language: input.language === 'en' ? 'en' : 'ja',
+      remarks: current ? (current.remarks || '') : ''
     };
 
     upsertReservation_(reservationSheet, current, savedReservation);
@@ -1021,6 +1024,17 @@ function upsertReservation_(sheet, existing, data) {
   sheet
     .getRange(targetRow, CONFIG.RES_COL_MODE)
     .setValue(data.mode === 'flexible' ? '随時受付' : '通常予約');
+
+  let remarks = String(data.remarks || '').trim();
+  if (data.language === 'en') {
+    const note = '英語表示から予約';
+    if (!remarks.includes(note)) {
+      remarks = remarks ? remarks + ' / ' + note : note;
+    }
+  }
+  sheet
+    .getRange(targetRow, CONFIG.RES_COL_REMARKS)
+    .setValue(remarks);
 
   sortReservations_(sheet);
 }
