@@ -1123,6 +1123,16 @@ button.slot .support-icon-x{font-size:18px}
   .slots{grid-template-columns:repeat(3,1fr)}
   button.slot{font-size:15px}
 }
+  .week-nav{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:12px 0 16px}
+  .week-nav-day{min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 1px;border:1px solid var(--edge-soft);border-radius:8px;background:var(--panel-2);color:var(--text);font:inherit;cursor:pointer}
+  .week-nav-day span:first-child{font-weight:700;font-size:clamp(11px,2.8vw,15px)}
+  .week-nav-day span:nth-child(2){font-size:12px}
+  .week-nav-day small{font-size:10px;min-height:1.2em}
+  .week-nav-day.saturday{color:#86bfff}
+  .week-nav-day.holiday{color:#ff9d9d}
+  .week-nav-day.today{outline:2px solid var(--silver);outline-offset:-2px}
+  .week-nav-day.unavailable{opacity:.45;color:var(--silver);cursor:not-allowed}
+  .day-title{scroll-margin-top:18px}
 </style>
   <!-- pages-redeploy-2 -->
 </head>
@@ -1265,6 +1275,7 @@ button.slot .support-icon-x{font-size:18px}
 
   <section class="card">
     <h2>希望日時を選択</h2>
+    <nav id="weekNav" class="week-nav" aria-label="日付へ移動"></nav>
     <div class="support-legend" aria-label="受付可能なサポート方法">
       <div class="support-legend-item"><span class="support-icon support-icon-game" aria-hidden="true"></span><span>ゲーム内</span></div>
       <div class="support-legend-item"><span class="support-icon support-icon-x" aria-hidden="true">𝕏</span><span>X</span></div>
@@ -1369,7 +1380,7 @@ button.slot .support-icon-x{font-size:18px}
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.13.18";
+  const EXPECTED_API_VERSION = "2026.10.14.1";
 
   let currentLang=localStorage.getItem("bookingLanguage")==="en" ? "en" : "ja";
   const I18N_EN={
@@ -1671,6 +1682,7 @@ button.slot .support-icon-x{font-size:18px}
     updateStoreBadges();
     renderMaintenanceSchedule();
     renderFlexibleReceptionSchedule();
+    renderWeekNav();
     applyLanguage(document.body);
 
     if(selected){
@@ -1719,7 +1731,7 @@ button.slot .support-icon-x{font-size:18px}
     setTimeout(()=>document.getElementById("cancelCharacterName").focus(),350);
   });
   let END_DATE = "2026-10-18";
-  const HOLIDAYS = new Set(["2026-10-12"]);
+  const HOLIDAYS = new Set();
   let bookedSlots = new Set();
   let flexibleSlotCounts = {};
   let maintenancePeriods = [];
@@ -2288,6 +2300,8 @@ button.slot .support-icon-x{font-size:18px}
         : {};
       maintenancePeriods=Array.isArray(result.maintenance) ? result.maintenance : [];
       specialReceptionPeriods=Array.isArray(result.specialReception) ? result.specialReception : [];
+      HOLIDAYS.clear();
+      if(Array.isArray(result.holidays)) result.holidays.forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)) HOLIDAYS.add(d);});
       if(result.windowStart) START_DATE=result.windowStart;
       if(result.windowEnd) END_DATE=result.windowEnd;
 
@@ -2295,6 +2309,7 @@ button.slot .support-icon-x{font-size:18px}
       renderMaintenanceSchedule();
       renderFlexibleReceptionSchedule();
       renderCalendar();
+      renderWeekNav();
 
       loading.classList.add("hidden");
       loading.classList.remove("error");
@@ -2313,9 +2328,50 @@ button.slot .support-icon-x{font-size:18px}
       renderMaintenanceSchedule();
       renderFlexibleReceptionSchedule();
       document.getElementById("calendar").innerHTML="";
+      document.getElementById("weekNav").innerHTML="";
       loading.classList.remove("hidden");
       loading.textContent=err.message || "予約状況を取得できません。再読み込みしてください。";
       loading.classList.add("error");
+    }
+  }
+
+
+  function renderWeekNav(){
+    const nav=document.getElementById("weekNav");
+    if(!nav) return;
+    nav.replaceChildren();
+    const today=nowInJstParts().date;
+    const date=parseDate(today);
+    const ja=["日","月","火","水","木","金","土"];
+    const en=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    for(let i=0;i<7;i++){
+      const key=dateKey(date);
+      const weekday=date.getDay();
+      const outside=key<START_DATE || key>END_DATE;
+      const closed=!outside && allTimes().every(time=>getMaintenanceState(key,time).closed);
+      const btn=document.createElement("button");
+      btn.type="button";
+      btn.className="week-nav-day";
+      if(key===today) btn.classList.add("today");
+      if(weekday===6) btn.classList.add("saturday");
+      if(weekday===0 || HOLIDAYS.has(key)) btn.classList.add("holiday");
+      if(outside || closed) btn.classList.add("unavailable");
+      btn.disabled=outside || closed;
+      const label=currentLang==="en" ? en[weekday] : ja[weekday];
+      const status=outside ? (currentLang==="en"?"Outside":"期間外") : closed ? (currentLang==="en"?"Closed":"停止") : i===0 ? (currentLang==="en"?"Today":"今日") : "";
+      const day=document.createElement("span");
+      day.textContent=(date.getMonth()+1)+"/"+date.getDate();
+      const week=document.createElement("span");
+      week.textContent=label;
+      const note=document.createElement("small");
+      note.textContent=status;
+      btn.append(day,week,note);
+      if(!btn.disabled) btn.addEventListener("click",()=>{
+        const heading=document.querySelector('.day[data-date="'+key+'"] .day-title');
+        if(heading) heading.scrollIntoView({behavior:"smooth",block:"start"});
+      });
+      nav.appendChild(btn);
+      date.setDate(date.getDate()+1);
     }
   }
 
@@ -2330,6 +2386,7 @@ button.slot .support-icon-x{font-size:18px}
       const d=dateKey(current);
       const section=document.createElement("div");
       section.className="day";
+      section.dataset.date=d;
 
       const title=document.createElement("div");
       title.className="day-title";
