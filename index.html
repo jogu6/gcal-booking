@@ -2361,7 +2361,9 @@ button.slot .support-icon-x{font-size:18px}
       const label=currentLang==="en" ? en[weekday] : ja[weekday];
       const status=outside ? (currentLang==="en"?"Outside":"期間外") : closed ? (currentLang==="en"?"Closed":"停止") : i===0 ? (currentLang==="en"?"Today":"今日") : "";
       const day=document.createElement("span");
-      day.textContent=(date.getMonth()+1)+"/"+date.getDate();
+      day.textContent=currentLang==="en"
+        ? new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(date)
+        : (date.getMonth()+1)+"/"+date.getDate();
       const week=document.createElement("span");
       week.textContent=label;
       const note=document.createElement("small");
