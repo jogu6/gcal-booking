@@ -1,9 +1,11 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.13.18',
+  APP_VERSION: '2026.10.14.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
   RESERVATION_SPREADSHEET_ID: '12mdeeY6y6xWv71CQdhxQCRxSI19oRPpTMkhlIIFX1vo',
+  HOLIDAY_SPREADSHEET_ID: '1pkRfYkVzq84vn11vkEZF6YHhMIIyVYgXQtjqO5lRpx0',
+  HOLIDAY_SHEET_NAME: '祝日一覧',
   RESERVATION_SHEET_NAME: '予約管理',
   MAINTENANCE_SHEET_NAME: 'メンテナンス',
   SPECIAL_RECEPTION_SHEET_NAME: '特別受付',
@@ -65,6 +67,7 @@ function doGet(e) {
         flexibleCounts: getFlexibleSlotCounts_(reservations, window, specialReception),
         maintenance: maintenance.map(publicMaintenance_),
         specialReception: specialReception.map(publicSpecialReception_),
+        holidays: getHolidayDates_(),
         windowStart: window.start,
         windowEnd: window.end,
         version: CONFIG.APP_VERSION
@@ -1223,4 +1226,21 @@ function getReservationSheet_() {
 function sanitizeCallback_(value) {
   const s = String(value || '');
   return /^[A-Za-z_$][0-9A-Za-z_$\.]*$/.test(s) ? s : '';
+}
+
+// 祝日の唯一の参照元は専用マスタースプレッドシート。
+function getHolidayDates_() {
+  const sheet = SpreadsheetApp.openById(CONFIG.HOLIDAY_SPREADSHEET_ID)
+    .getSheetByName(CONFIG.HOLIDAY_SHEET_NAME);
+  if (!sheet) throw new Error('祝日マスターの「祝日一覧」シートがありません。');
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const dates = values.map(row => {
+    const value = row[0];
+    if (value instanceof Date) return Utilities.formatDate(value, CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+    const str = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? str : '';
+  }).filter(Boolean);
+  return [...new Set(dates)].sort();
 }
