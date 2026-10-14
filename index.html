@@ -1625,11 +1625,11 @@ button.slot .support-icon-x{font-size:18px}
     let node;
     while((node=walker.nextNode())){
       if(node.parentElement && !["SCRIPT","STYLE"].includes(node.parentElement.tagName)){
-        translateTextNode(node);
+        if(!node.parentElement.closest("#weekNav")) translateTextNode(node);
       }
     }
     if(root.nodeType===1) translateElementAttrs(root);
-    root.querySelectorAll?.("*").forEach(translateElementAttrs);
+    root.querySelectorAll?.("*").forEach(el=>{if(!el.closest("#weekNav")) translateElementAttrs(el);});
 
     const ja=document.getElementById("langJa");
     const en=document.getElementById("langEn");
@@ -2339,6 +2339,7 @@ button.slot .support-icon-x{font-size:18px}
   function renderWeekNav(){
     const nav=document.getElementById("weekNav");
     if(!nav) return;
+    nav.setAttribute("aria-label",currentLang==="en"?"Jump to date":"日付へ移動");
     nav.replaceChildren();
     const today=nowInJstParts().date;
     const date=parseDate(today);
@@ -2366,6 +2367,8 @@ button.slot .support-icon-x{font-size:18px}
       const note=document.createElement("small");
       note.textContent=status;
       btn.append(day,week,note);
+      // Dynamic bilingual labels are already localized; avoid the global text translator rewriting them.
+      btn.dataset.localized="true";
       if(!btn.disabled) btn.addEventListener("click",()=>{
         const heading=document.querySelector('.day[data-date="'+key+'"] .day-title');
         if(heading) heading.scrollIntoView({behavior:"smooth",block:"start"});
