@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.14.1',
+  APP_VERSION: '2026.10.14.2',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -67,7 +67,7 @@ function doGet(e) {
         flexibleCounts: getFlexibleSlotCounts_(reservations, window, specialReception),
         maintenance: maintenance.map(publicMaintenance_),
         specialReception: specialReception.map(publicSpecialReception_),
-        holidays: getHolidayDates_(),
+        holidays: getHolidayDates_(window.start, window.end),
         windowStart: window.start,
         windowEnd: window.end,
         version: CONFIG.APP_VERSION
@@ -1229,18 +1229,45 @@ function sanitizeCallback_(value) {
 }
 
 // 祝日の唯一の参照元は専用マスタースプレッドシート。
-function getHolidayDates_() {
+// 祝日マスターは日付昇順。受付期間に交差する行だけ読み取る。
+function getHolidayDates_(startDate, endDate) {
   const sheet = SpreadsheetApp.openById(CONFIG.HOLIDAY_SPREADSHEET_ID)
     .getSheetByName(CONFIG.HOLIDAY_SHEET_NAME);
   if (!sheet) throw new Error('祝日マスターの「祝日一覧」シートがありません。');
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-  const dates = values.map(row => {
-    const value = row[0];
-    if (value instanceof Date) return Utilities.formatDate(value, CONFIG.TIME_ZONE, 'yyyy-MM-dd');
-    const str = String(value || '').trim();
-    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? str : '';
-  }).filter(Boolean);
-  return [...new Set(dates)].sort();
+
+  // 日付列は昇順であることが前提。範囲外の過去分を一括取得しない。
+  // TextFinderで受付開始日以降の最初の行を探す。
+  const range = sheet.getRange(2, 1, lastRow - 1, 1);
+  const first = range.createTextFinder('^' + startDate.replace(/-/g, '-') + '$')
+    .useRegularExpression(true).matchEntireCell(true).findNext();
+  let firstRow;
+  if (first) {
+    firstRow = first.getRow();
+  } else {
+    // 祝日が開始日と一致しない場合は、日付順の列を二分探索する。
+    let low = 2, high = lastRow + 1;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      const value = sheet.getRange(mid, 1).getValue();
+      const key = value instanceof Date
+        ? Utilities.formatDate(value, CONFIG.TIME_ZONE, 'yyyy-MM-dd')
+        : String(value || '').trim();
+      if (key < startDate) low = mid + 1;
+      else high = mid;
+    }
+    firstRow = low;
+  }
+  if (firstRow > lastRow) return [];
+  const result = [];
+  for (let row = firstRow; row <= lastRow; row++) {
+    const value = sheet.getRange(row, 1).getValue();
+    const key = value instanceof Date
+      ? Utilities.formatDate(value, CONFIG.TIME_ZONE, 'yyyy-MM-dd')
+      : String(value || '').trim();
+    if (key > endDate) break;
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(key) && key >= startDate) result.push(key);
+  }
+  return [...new Set(result)];
 }
