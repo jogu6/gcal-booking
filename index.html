@@ -1592,6 +1592,12 @@ button.slot .support-icon-x{font-size:18px}
     m=trimmed.match(/^(.+) の予約を取り消す$/);
     if(m) return s.replace(trimmed,"Cancel booking: "+m[1]);
 
+    m=trimmed.match(/^1時間予約のため(\d{2}:\d{2})枠も必要ですが、すでに予約されています。別の時刻を選択してください。$/);
+    if(m) return s.replace(trimmed,"This booking requires one hour, but the "+m[1]+" slot is already booked. Please choose another time.");
+
+    m=trimmed.match(/^1時間予約の後半30分は(.+)対応を利用できないため、この時刻は予約できません。$/);
+    if(m) return s.replace(trimmed,"This time cannot be booked because "+m[1]+" support is unavailable during the second 30 minutes.");
+
     return source;
   }
 
