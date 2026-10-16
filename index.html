@@ -3088,6 +3088,10 @@ button.slot .support-icon-x{font-size:18px}
     updateBookingPeriodText();
     renderCalendar();
   },60000);
+
+  setInterval(()=>{
+    loadSlots(0,true);
+  },10*60*1000);
 </script>
 </body>
 </html>
