@@ -2182,10 +2182,16 @@ button.slot .support-icon-x{font-size:18px}
         return false;
       }
 
-      verifiedMember=true;
-      verifiedMemberName=normalizeName(name);
       verifiedOneHour=!!result.oneHourBooking;
       updateSelectedDisplay();
+
+      if(verifiedOneHour && selected.time>"22:00"){
+        showMessage("1時間予約のため、22:00までの開始時刻を選択してください。","error");
+        return false;
+      }
+
+      verifiedMember=true;
+      verifiedMemberName=normalizeName(name);
       supportMethodPanel.classList.remove("hidden");
 
       worldInput.dataset.homeWorld=result.world || "";
