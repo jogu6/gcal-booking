@@ -1148,7 +1148,7 @@ button.slot .support-icon-x{font-size:18px}
   <div class="booking-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="bookingConfirmTitle">
     <h2 id="bookingConfirmTitle" class="booking-confirm-title">予約前の重要事項</h2>
     <ul class="booking-confirm-rules">
-      <li><strong>予約枠は30分</strong>で、待機時間と登録サポート時間を含みます。</li>
+      <li><strong id="bookingDurationRule">予約枠は30分</strong>で、待機時間と登録サポート時間を含みます。</li>
       <li>予約時刻までに、選択した方法ですぐ対応できる状態にしてください。</li>
       <li><strong>予約時刻から10分以内に応答・合流できない場合はキャンセル扱い</strong>となります。</li>
       <li>この10分ルールは、ゲーム内・X・コンパニオンアプリのすべてに共通です。</li>
@@ -1381,13 +1381,14 @@ button.slot .support-icon-x{font-size:18px}
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbyAVA7JYgDSsa70VODISSq2a0sv2FdqD0UJDEs15WDNs17RuW_eug2_mYta14He4gpVng/exec";
-  const EXPECTED_API_VERSION = "2026.10.16.2";
+  const EXPECTED_API_VERSION = "2026.10.16.3";
 
   let currentLang=localStorage.getItem("bookingLanguage")==="en" ? "en" : "ja";
   const I18N_EN={
     "処理中です…":"Processing…",
     "予約前の重要事項":"Important information before booking",
     "予約枠は30分":"Each booking slot is 30 minutes",
+    "予約枠は60分":"Each booking slot is 60 minutes",
     "で、待機時間と登録サポート時間を含みます。":"including both waiting time and registration support.",
     "予約時刻までに、選択した方法ですぐ対応できる状態にしてください。":"Please be ready to respond immediately through your selected support method by your booking time.",
     "予約時刻から10分以内に応答・合流できない場合はキャンセル扱い":"If you do not respond or join within 10 minutes of your booking time, the booking will be treated as canceled",
@@ -1540,6 +1541,10 @@ button.slot .support-icon-x{font-size:18px}
     "この時間帯はコンパニオンアプリ対応を受け付けていません。別の対応方法を選択してください。":"Companion App support is unavailable for this time. Please choose another method.",
     "その時間帯は受付停止になりました。別の時刻を選択してください。":"That time is no longer available. Please choose another time.",
     "その時間帯は通常予約へ切り替えるためのアディショナルタイムです。別の時刻を選択してください。":"That time is Additional Time before regular bookings begin. Please choose another time.",
+    "1時間予約のため、22:00までの開始時刻を選択してください。":"This booking requires one hour, so please choose a start time no later than 22:00.",
+    "1時間予約の後半30分が受付停止のため、この時刻は予約できません。":"This time cannot be booked because the second 30 minutes of the one-hour booking are unavailable.",
+    "1時間予約の後半30分がアディショナルタイムのため、この時刻は予約できません。":"This time cannot be booked because the second 30 minutes fall in Additional Time.",
+    "1時間予約の途中で受付方式が切り替わるため、この時刻は予約できません。":"This time cannot be booked because the reception mode changes during the one-hour booking.",
     "予約を取り消す":"Cancel booking",
     "予約を取り消してよろしいですか?":"Cancel this booking?"
   };
@@ -1686,23 +1691,7 @@ button.slot .support-icon-x{font-size:18px}
     renderWeekNav();
     applyLanguage(document.body);
 
-    if(selected){
-      const selectedDate=parseDate(selected.date);
-      if(currentLang==="en"){
-        const englishDate=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short"}).format(selectedDate);
-        document.getElementById("selectedText").textContent=
-          englishDate+" "+selected.time+" – "+endTime(selected.time)+(selectedFlexible ? " (Flexible)" : "");
-      }else{
-        const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
-        let selectedWeekdayClass="";
-        if(selectedDate.getDay()===6) selectedWeekdayClass=" saturday";
-        if(selectedDate.getDay()===0) selectedWeekdayClass=" sunday";
-        if(HOLIDAYS.has(selected.date)) selectedWeekdayClass=" holiday";
-        document.getElementById("selectedText").innerHTML=
-          `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${selected.time} ～ ${endTime(selected.time)}`+
-          (selectedFlexible ? "（随時受付）" : "");
-      }
-    }
+    if(selected) updateSelectedDisplay();
 
     setTimeout(()=>applyLanguage(document.body),0);
   }
@@ -1814,6 +1803,32 @@ button.slot .support-icon-x{font-size:18px}
     const [h,m] = time.split(":").map(Number);
     const total = h*60+m+30;
     return `${pad2(Math.floor(total/60))}:${pad2(total%60)}`;
+  }
+
+  function bookingEndTime(time){
+    if(!verifiedOneHour) return endTime(time);
+    const [h,m]=time.split(":").map(Number);
+    const total=h*60+m+60;
+    return `${pad2(Math.floor(total/60))}:${pad2(total%60)}`;
+  }
+
+  function updateSelectedDisplay(){
+    if(!selected) return;
+    const selectedDate=parseDate(selected.date);
+    if(currentLang==="en"){
+      const englishDate=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short"}).format(selectedDate);
+      document.getElementById("selectedText").textContent=
+        englishDate+" "+selected.time+" – "+bookingEndTime(selected.time)+(selectedFlexible ? " (Flexible)" : "");
+    }else{
+      const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
+      let selectedWeekdayClass="";
+      if(selectedDate.getDay()===6) selectedWeekdayClass=" saturday";
+      if(selectedDate.getDay()===0) selectedWeekdayClass=" sunday";
+      if(HOLIDAYS.has(selected.date)) selectedWeekdayClass=" holiday";
+      document.getElementById("selectedText").innerHTML=
+        `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${selected.time} ～ ${bookingEndTime(selected.time)}`+
+        (selectedFlexible ? "（随時受付）" : "");
+    }
   }
 
   function allTimes(){
@@ -2114,6 +2129,7 @@ button.slot .support-icon-x{font-size:18px}
 
   let verifiedMember = false;
   let verifiedMemberName = "";
+  let verifiedOneHour = false;
 
   async function verifyMemberAndApplyDc(){
     if(!selected) return false;
@@ -2124,6 +2140,7 @@ button.slot .support-icon-x{font-size:18px}
 
     verifiedMember=false;
     verifiedMemberName="";
+    verifiedOneHour=false;
     dcRow.classList.add("hidden");
     worldRow.classList.add("hidden");
     supportMethodPanel.classList.add("hidden");
@@ -2161,6 +2178,8 @@ button.slot .support-icon-x{font-size:18px}
 
       verifiedMember=true;
       verifiedMemberName=normalizeName(name);
+      verifiedOneHour=!!result.oneHourBooking;
+      updateSelectedDisplay();
       supportMethodPanel.classList.remove("hidden");
 
       worldInput.dataset.homeWorld=result.world || "";
@@ -2200,6 +2219,8 @@ button.slot .support-icon-x{font-size:18px}
     if(verifiedMemberName && normalizeName(characterNameInput.value)!==verifiedMemberName){
       verifiedMember=false;
       verifiedMemberName="";
+      verifiedOneHour=false;
+      updateSelectedDisplay();
       document.getElementById("dcRow").classList.add("hidden");
       worldRow.classList.add("hidden");
       supportMethodPanel.classList.add("hidden");
@@ -2538,6 +2559,7 @@ button.slot .support-icon-x{font-size:18px}
     selectedSupportMethods=[];
     verifiedMember=false;
     verifiedMemberName="";
+    verifiedOneHour=false;
     document.getElementById("characterName").value="";
     document.getElementById("flexibleSelectedNotice").classList.add("hidden");
     document.getElementById("dcRow").classList.add("hidden");
@@ -2553,6 +2575,11 @@ button.slot .support-icon-x{font-size:18px}
 
   function openBookingConfirm(request){
     pendingBookingRequest=request;
+    const durationRule=document.getElementById("bookingDurationRule");
+    if(durationRule){
+      durationRule.textContent=verifiedOneHour ? "予約枠は60分" : "予約枠は30分";
+      applyLanguage(durationRule);
+    }
     bookingRuleConfirmed.checked=false;
     bookingConfirmSubmit.disabled=true;
     bookingConfirmLayer.classList.remove("hidden");
@@ -2607,27 +2634,12 @@ button.slot .support-icon-x{font-size:18px}
         "この時間帯は随時受付です。";
     }
 
-    const selectedDate=parseDate(date);
-    const selectedWeekday=["日","月","火","水","木","金","土"][selectedDate.getDay()];
-    let selectedWeekdayClass="";
-    if(selectedDate.getDay()===6) selectedWeekdayClass=" saturday";
-    if(selectedDate.getDay()===0) selectedWeekdayClass=" sunday";
-    if(HOLIDAYS.has(date)) selectedWeekdayClass=" holiday";
-
-    if(currentLang==="en"){
-      const englishDate=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",weekday:"short"}).format(selectedDate);
-      document.getElementById("selectedText").textContent=
-        englishDate+" "+time+" – "+endTime(time)+(selectedFlexible ? " (Flexible)" : "");
-    }else{
-      document.getElementById("selectedText").innerHTML=
-        `${selectedDate.getMonth()+1}月${selectedDate.getDate()}日（<span class="chosen-weekday${selectedWeekdayClass}">${selectedWeekday}</span>） ${time} ～ ${endTime(time)}`+
-        (selectedFlexible ? "（随時受付）" : "");
-    }
-
     const dcRow=document.getElementById("dcRow");
     const dc=document.getElementById("dc");
     verifiedMember=false;
     verifiedMemberName="";
+    verifiedOneHour=false;
+    updateSelectedDisplay();
     dcRow.classList.add("hidden");
     document.getElementById("worldRow").classList.add("hidden");
     
@@ -2995,6 +3007,7 @@ button.slot .support-icon-x{font-size:18px}
       document.getElementById("flexibleSelectedNotice").classList.add("hidden");
       verifiedMember=false;
       verifiedMemberName="";
+      verifiedOneHour=false;
       document.getElementById("characterName").value="";
       setDcValue("");
       worldRow.classList.add("hidden");
