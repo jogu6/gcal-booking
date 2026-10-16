@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.14.2',
+  APP_VERSION: '2026.10.16.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -130,7 +130,7 @@ function member_(name) {
       ? reservation.meetingDc
       : '',
     meetingWorld: hasBooking ? reservation.meetingWorld || '' : '',
-    eligible: member.status === '未招待',
+    eligible: member.status === '招待日ご予約待ち',
     sourceStatus: member.status,
     canCancel: hasBooking,
     bookingDate: hasBooking ? reservation.date : '',
@@ -174,7 +174,7 @@ function book_(input) {
     if (status === '招待済み') {
       return { ok: false, message: 'このキャラクターはすでに招待済みです。' };
     }
-    if (status !== '未招待') {
+    if (status !== '招待日ご予約待ち') {
       return { ok: false, message: 'このキャラクターは現在予約できません。' };
     }
 
