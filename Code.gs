@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.16.2',
+  APP_VERSION: '2026.10.16.3',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -24,6 +24,7 @@ const CONFIG = {
   MEMBER_COL_NAME: 2,
   MEMBER_COL_HOME: 3,
   MEMBER_COL_STATUS: 4,
+  MEMBER_COL_ONE_HOUR: 5,
 
   // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC E=集合ワールド
   // F=対応方法 G=連絡先 H=更新日時 I=対応状況 J=対象者に連絡 K=受付方式 L=備考
@@ -132,6 +133,7 @@ function member_(name) {
     meetingWorld: hasBooking ? reservation.meetingWorld || '' : '',
     eligible: member.status === 'ご予約待ち/ご予約中',
     sourceStatus: member.status,
+    oneHourBooking: !!member.oneHourBooking,
     canCancel: hasBooking,
     bookingDate: hasBooking ? reservation.date : '',
     bookingTime: hasBooking ? reservation.time : '',
@@ -233,6 +235,63 @@ function book_(input) {
       };
     }
 
+    const oneHourBooking = !!member.oneHourBooking;
+    const secondTime = oneHourBooking
+      ? addMinutesToTime_(input.time, CONFIG.SLOT_MINUTES)
+      : '';
+
+    if (oneHourBooking) {
+      if (!secondTime || (Number(secondTime.slice(0,2)) * 60 + Number(secondTime.slice(3,5))) >= CONFIG.END_MINUTE) {
+        return {
+          ok: false,
+          code: 'ONE_HOUR_OUTSIDE_HOURS',
+          message: '1時間予約のため、22:00までの開始時刻を選択してください。'
+        };
+      }
+
+      const secondMaintenanceState = getMaintenanceStateForSlot_(input.date, secondTime, maintenance);
+      if (secondMaintenanceState.closed) {
+        return {
+          ok: false,
+          code: 'ONE_HOUR_SECOND_CLOSED',
+          message: '1時間予約の後半30分が受付停止のため、この時刻は予約できません。'
+        };
+      }
+      if (!isSupportMethodAvailableForMaintenance_(input.supportMethod, secondMaintenanceState)) {
+        const methodLabel = input.supportMethod === 'x'
+          ? 'X'
+          : (input.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内');
+        return {
+          ok: false,
+          code: 'ONE_HOUR_SECOND_METHOD_UNAVAILABLE',
+          message: '1時間予約の後半30分は' + methodLabel + '対応を利用できないため、この時刻は予約できません。'
+        };
+      }
+
+      const secondSpecialState = getSpecialReceptionStateForSlot_(
+        input.date,
+        secondTime,
+        specialReception
+      );
+      if (secondSpecialState && secondSpecialState.state === 'buffer') {
+        return {
+          ok: false,
+          code: 'ONE_HOUR_SECOND_BUFFER',
+          message: '1時間予約の後半30分がアディショナルタイムのため、この時刻は予約できません。'
+        };
+      }
+
+      const firstIsFlexible = !!specialState && specialState.state === 'flexible';
+      const secondIsFlexible = !!secondSpecialState && secondSpecialState.state === 'flexible';
+      if (firstIsFlexible !== secondIsFlexible) {
+        return {
+          ok: false,
+          code: 'ONE_HOUR_MODE_CHANGE',
+          message: '1時間予約の途中で受付方式が切り替わるため、この時刻は予約できません。'
+        };
+      }
+    }
+
     const reservations = readReservations_(reservationSheet);
     const current = findReservationInRows_(reservations, normalizeName_(input.name));
     const currentKey = current && current.date && current.time
@@ -249,22 +308,33 @@ function book_(input) {
         ? 'normal'
         : (isFlexibleSlot ? 'flexible' : 'normal');
 
+    const requestedKeys = [requestedKey];
+    if (oneHourBooking) {
+      requestedKeys.push(input.date + ' ' + secondTime);
+    }
+
+    let collisionKey = '';
     const collision = reservations.some(reservation => {
       if (current && reservation.row === current.row) return false;
-      if (reservation.date !== input.date || reservation.time !== input.time) return false;
 
       if (requestedMode === 'flexible' && reservation.mode === 'flexible') {
         return false;
       }
 
-      return true;
+      const occupied = reservationOccupiedKeys_(reservation);
+      const hit = requestedKeys.find(key => occupied.includes(key));
+      if (hit) collisionKey = hit;
+      return !!hit;
     });
 
     if (collision) {
+      const conflictTime = collisionKey ? collisionKey.slice(-5) : input.time;
       return {
         ok: false,
         code: 'SLOT_TAKEN',
-        message: 'この時間は先に予約されました。別の時間を選んでください。'
+        message: oneHourBooking
+          ? '1時間予約のため' + conflictTime + '枠も必要ですが、すでに予約されています。別の時刻を選択してください。'
+          : 'この時間は先に予約されました。別の時間を選んでください。'
       };
     }
 
@@ -280,6 +350,7 @@ function book_(input) {
       xAccount: input.supportMethod === 'x' ? (input.contact || '') : '',
       mode: requestedMode,
       language: input.language === 'en' ? 'en' : 'ja',
+      oneHourBooking: oneHourBooking,
       remarks: current ? (current.remarks || '') : ''
     };
 
@@ -303,7 +374,8 @@ function book_(input) {
       ok: true,
       oldKey: currentKey,
       bookedKey: requestedKey,
-      mode: requestedMode
+      mode: requestedMode,
+      durationMinutes: oneHourBooking ? 60 : 30
     };
   } finally {
     lock.releaseLock();
@@ -401,7 +473,8 @@ function readReservations_(sheet) {
       xAccount: String(values[i][6] || '').trim(),
       updatedAt: String(values[i][7] || '').trim(),
       mode: String(values[i][10] || '').trim() === '随時受付' ? 'flexible' : 'normal',
-      remarks: String(values[i][11] || '').trim()
+      remarks: String(values[i][11] || '').trim(),
+      oneHourBooking: String(values[i][11] || '').includes('1時間予約')
     });
   }
 
@@ -413,6 +486,25 @@ function findReservationInRows_(reservations, normalizedName) {
     if (reservations[i].normalizedName === normalizedName) return reservations[i];
   }
   return null;
+}
+
+function addMinutesToTime_(time, minutes) {
+  const m = String(time || '').match(/^(\d{2}):(\d{2})$/);
+  if (!m) return '';
+  const total = Number(m[1]) * 60 + Number(m[2]) + Number(minutes || 0);
+  if (total < 0 || total >= 24 * 60) return '';
+  return String(Math.floor(total / 60)).padStart(2,'0') + ':' +
+    String(total % 60).padStart(2,'0');
+}
+
+function reservationOccupiedKeys_(reservation) {
+  if (!reservation || !reservation.date || !reservation.time) return [];
+  const keys = [reservation.date + ' ' + reservation.time];
+  if (reservation.oneHourBooking) {
+    const secondTime = addMinutesToTime_(reservation.time, CONFIG.SLOT_MINUTES);
+    if (secondTime) keys.push(reservation.date + ' ' + secondTime);
+  }
+  return keys;
 }
 
 function getBookedSlotsFromReservations_(reservations, window, specialReception) {
@@ -434,7 +526,7 @@ function getBookedSlotsFromReservations_(reservations, window, specialReception)
       return;
     }
 
-    set.add(reservation.date + ' ' + reservation.time);
+    reservationOccupiedKeys_(reservation).forEach(key => set.add(key));
   });
 
   return Array.from(set).sort();
@@ -458,8 +550,9 @@ function getFlexibleSlotCounts_(reservations, window, specialReception) {
 
     if (!state || state.state !== 'flexible') return;
 
-    const key = reservation.date + ' ' + reservation.time;
-    counts[key] = (counts[key] || 0) + 1;
+    reservationOccupiedKeys_(reservation).forEach(key => {
+      counts[key] = (counts[key] || 0) + 1;
+    });
   });
 
   return counts;
@@ -501,9 +594,9 @@ function findMember_(sheet, normalizedName) {
       CONFIG.MEMBER_FIRST_DATA_ROW,
       CONFIG.MEMBER_COL_NAME,
       rowCount,
-      3
+      4
     )
-    .getDisplayValues();
+    .getValues();
 
   for (let i = 0; i < values.length; i++) {
     const name = String(values[i][0] || '').trim();
@@ -514,7 +607,8 @@ function findMember_(sheet, normalizedName) {
       row: CONFIG.MEMBER_FIRST_DATA_ROW + i,
       name: name,
       home: String(values[i][1] || '').trim(),
-      status: String(values[i][2] || '').trim()
+      status: String(values[i][2] || '').trim(),
+      oneHourBooking: values[i][3] === true
     };
   }
   return null;
@@ -1029,12 +1123,15 @@ function upsertReservation_(sheet, existing, data) {
     .setValue(data.mode === 'flexible' ? '随時受付' : '通常予約');
 
   let remarks = String(data.remarks || '').trim();
-  if (data.language === 'en') {
-    const note = '英語表示から予約';
-    if (!remarks.includes(note)) {
-      remarks = remarks ? remarks + ' / ' + note : note;
-    }
+  let remarkParts = remarks
+    ? remarks.split(' / ').map(value => value.trim()).filter(Boolean)
+    : [];
+  remarkParts = remarkParts.filter(value => value !== '1時間予約');
+  if (data.oneHourBooking) remarkParts.push('1時間予約');
+  if (data.language === 'en' && !remarkParts.includes('英語表示から予約')) {
+    remarkParts.push('英語表示から予約');
   }
+  remarks = remarkParts.join(' / ');
   sheet
     .getRange(targetRow, CONFIG.RES_COL_REMARKS)
     .setValue(remarks);
