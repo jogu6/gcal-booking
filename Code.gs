@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.16.3',
+  APP_VERSION: '2026.10.16.4',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -55,6 +55,7 @@ function doGet(e) {
       const reservationSheet = getSheetFrom_(privateSs, CONFIG.RESERVATION_SHEET_NAME);
       const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
       const specialReceptionSheet = getSheetFrom_(privateSs, CONFIG.SPECIAL_RECEPTION_SHEET_NAME);
+      cleanupExpiredMaintenance_(maintenanceSheet);
       const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
       const specialReception = getSpecialReceptionPeriodsFromSheet_(specialReceptionSheet);
       let reservations = readReservations_(reservationSheet);
@@ -612,6 +613,39 @@ function findMember_(sheet, normalizedName) {
     };
   }
   return null;
+}
+
+function cleanupExpiredMaintenance_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return 0;
+
+  try {
+    const currentLastRow = sheet.getLastRow();
+    if (currentLastRow < 2) return 0;
+
+    const rows = sheet.getRange(2, 1, currentLastRow - 1, 3).getValues();
+    const nowMs = Date.now();
+    const deleteRows = [];
+
+    rows.forEach((row, index) => {
+      const end = row[2];
+      if (!(end instanceof Date)) return;
+      if (end.getTime() <= nowMs) {
+        deleteRows.push(index + 2);
+      }
+    });
+
+    deleteRows.sort((a,b) => b - a).forEach(rowNumber => {
+      sheet.deleteRow(rowNumber);
+    });
+
+    return deleteRows.length;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function getMaintenancePeriodsFromSheet_(sheet) {
