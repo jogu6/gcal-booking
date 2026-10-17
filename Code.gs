@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.16.4',
+  APP_VERSION: '2026.10.18.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -828,6 +828,12 @@ function isSupportMethodAvailableForMaintenance_(method, state) {
 
 function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) {
   if (!maintenance.length || !reservations.length) return reservations;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+  // A simultaneous slots request may already have cancelled these rows.
+  // Reread while holding the same lock as book/cancel before deleting/notifying.
+  reservations = readReservations_(sheet);
 
   const removeRows = [];
   const keep = [];
@@ -854,10 +860,12 @@ function reconcileReservationsForMaintenance_(sheet, reservations, maintenance) 
   removeRows.sort((a,b) => b-a).forEach(row => sheet.deleteRow(row));
 
   if (autoCancelled.length) {
-    notifyDiscordAutoCancelled_(autoCancelled, maintenance);
+    try { notifyDiscordAutoCancelled_(autoCancelled, maintenance); }
+    catch (error) { console.error('自動取消の通知に失敗しました。予約の取消結果は保存済みです。'); }
   }
 
   return keep;
+  } finally { lock.releaseLock(); }
 }
 
 function sendDiscordReservationEmbed_(embed) {
@@ -936,6 +944,7 @@ function hasReservationChanged_(before, after) {
 }
 
 function notifyDiscordReservationCreated_(reservation) {
+  queueBoardReservation_('新規予約', reservation);
   sendDiscordReservationEmbed_({
     title: '新規予約',
     fields: reservationFields_(reservation)
@@ -943,6 +952,7 @@ function notifyDiscordReservationCreated_(reservation) {
 }
 
 function notifyDiscordReservationChanged_(before, after) {
+  queueBoardReservation_('予約変更', after, before);
   sendDiscordReservationEmbed_({
     title: '予約変更',
     fields: [
@@ -988,6 +998,7 @@ function notifyDiscordReservationChanged_(before, after) {
 }
 
 function notifyDiscordReservationCancelled_(reservation) {
+  queueBoardReservation_('予約取り消し', reservation);
   sendDiscordReservationEmbed_({
     title: '予約取り消し',
     fields: reservationFields_(reservation)
@@ -995,6 +1006,7 @@ function notifyDiscordReservationCancelled_(reservation) {
 }
 
 function notifyDiscordAutoCancelled_(reservations, maintenance) {
+  reservations.forEach(reservation => queueBoardReservation_('メンテナンスによる予約の自動キャンセル', reservation));
   const webhookUrl = PropertiesService
     .getScriptProperties()
     .getProperty('DISCORD_WEBHOOK_URL');
