@@ -316,6 +316,8 @@ Discord通知でも集合DCを省略した予約は `(DC指定省略)` と表示
 
 ### 利用者が行う設定
 
+公開画面 `index.html` の `EXPECTED_API_VERSION` と `Code.gs` の `CONFIG.APP_VERSION` は、どちらも `2026.10.18.1` に揃えます。今回の追加時にHTML側の更新が漏れ、最新版のApps Scriptでも不一致となっていたため修正しました。今後は版番号を変更する際に、この2か所と公開配信内容の一致を確認します。Webhookの送信確認だけでは、この画面側の判定を確認したことにはなりません。
+
 1. Apps Scriptプロジェクトへ更新した `Code.gs` と、新しいスクリプトファイル `BoardWebhook.gs` を反映します。公開用の index.html へ貼り付けないでください。
 2. gcalの開発者で対象掲示板の設定 → Webhookの設定から受信URLを発行します。投稿者の名前・自画像は自由に設定できます。
 3. Apps Scriptの「プロジェクトの設定」→「スクリプト プロパティ」に `GCAL_BOARD_WEBHOOK_URL` と受信URLを保存します。この作業・Apps Scriptの配備は利用者の担当です。URLをGitHubへコミットしないでください。
