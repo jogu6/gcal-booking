@@ -563,6 +563,33 @@ button.slot.transition-buffer{
   color:#fff3cf;
   font-size:1.04em;
 }
+.registration-guide-note{
+  margin:18px 0 20px;
+  padding:15px 16px;
+  border:1px solid rgba(126,181,222,.48);
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(35,58,78,.76),rgba(26,44,60,.82));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 4px 14px rgba(0,0,0,.16);
+  color:#e9f4fc;
+  line-height:1.75;
+}
+.registration-guide-note strong{
+  color:#fff;
+  font-size:1.04em;
+}
+.registration-guide-link{
+  display:inline-block;
+  margin-top:10px;
+  padding:9px 14px;
+  border:1px solid rgba(193,210,227,.42);
+  border-radius:7px;
+  background:linear-gradient(180deg,#365777,#28425e);
+  color:#fff;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 7px rgba(0,0,0,.24);
+}
+.registration-guide-link:hover{filter:brightness(1.08)}
 .auth-links{
   display:flex;
   flex-wrap:wrap;
@@ -1223,6 +1250,14 @@ button.slot .support-icon-x{font-size:18px}
       </div>
     </div>
 
+    <div class="registration-guide-note">
+      <strong>登録操作に不安がある方へ</strong><br>
+      スマートフォンの基本操作に自信がない方、コピー・貼り付けの意味が分からない方、ワンタイムパスワードを初めて使う方は、事前に「登録の手引き」をご確認ください。<br>
+      画像付きで、招待URLを開いてから登録が完了するまで順番に説明しています。<br>
+      <span class="registration-guide-lang-note hidden" id="registrationGuideLangNote">※ 登録の手引きは日本語ページです。</span>
+      <a class="registration-guide-link" href="https://jogu6.github.io/gcal/t/r/" target="_blank" rel="noopener noreferrer">登録の手引きを見る</a>
+    </div>
+
     <h2>招待・登録サポート方法</h2>
     <div class="support-guide">
       <div class="support-guide-title">予約時間ごとに、利用できるサポート方法をアイコンで表示します。</div>
@@ -1422,6 +1457,11 @@ button.slot .support-icon-x{font-size:18px}
     "事前準備のおすすめ":"Recommended preparation",
     "事前にスマホなら Google 認証システム(Authenticator) アプリ、PCなら Authenticator Chrome拡張機能をインストールしていただくことをお勧めします。":"We recommend installing Google Authenticator on your phone, or the Authenticator Chrome extension on PC, in advance.",
     "当日でよろしければ、そちらもサポートさせていただきます。":"If needed, we can also help you set it up on the day.",
+    "登録操作に不安がある方へ":"If you are unsure about the registration process",
+    "スマートフォンの基本操作に自信がない方、コピー・貼り付けの意味が分からない方、ワンタイムパスワードを初めて使う方は、事前に「登録の手引き」をご確認ください。":"If you are not confident with basic smartphone operation, are unfamiliar with copy and paste, or are using a one-time password for the first time, please review the registration guide in advance.",
+    "画像付きで、招待URLを開いてから登録が完了するまで順番に説明しています。":"The guide explains each step with images, from opening the invitation URL through completing registration.",
+    "※ 登録の手引きは日本語ページです。":"Note: The registration guide is available in Japanese only.",
+    "登録の手引きを見る":"View the registration guide",
     "Authenticator Chrome拡張機能":"Authenticator Chrome extension",
     "招待・登録サポート方法":"Invitation & registration support method",
     "予約時間ごとに、利用できるサポート方法をアイコンで表示します。":"Available support methods are shown as icons for each booking time.",
@@ -1643,6 +1683,11 @@ button.slot .support-icon-x{font-size:18px}
     }
     if(root.nodeType===1) translateElementAttrs(root);
     root.querySelectorAll?.("*").forEach(el=>{if(!el.closest("#weekNav")) translateElementAttrs(el);});
+
+    const guideLangNote=document.getElementById("registrationGuideLangNote");
+    if(guideLangNote){
+      guideLangNote.classList.toggle("hidden",currentLang!=="en");
+    }
 
     const ja=document.getElementById("langJa");
     const en=document.getElementById("langEn");
