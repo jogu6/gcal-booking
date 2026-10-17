@@ -1403,6 +1403,7 @@ button.slot .support-icon-x{font-size:18px}
     "閉じる":"Close",
     "「閉じる」はいつでも押せます。未確認のまま閉じた場合は、予約入力を破棄して日時選択前の状態に戻ります。":"You can close this dialog at any time. If you close it without checking the confirmation box, your booking entries will be discarded and you will return to the time-selection stage.",
     "予約しました。":"Booking confirmed.",
+    "1時間枠で予約しました。":"Your one-hour booking is confirmed.",
     "当日はよろしくお願いします。":"We look forward to assisting you.",
     "予約を取り消しました。":"Your booking has been canceled.",
     "くまたんグループ 招待&登録":"Kumatan Group Invitation & Registration",
@@ -2512,14 +2513,16 @@ button.slot .support-icon-x{font-size:18px}
   const bookingConfirmClose=document.getElementById("bookingConfirmClose");
   let pendingBookingRequest=null;
 
-  function openBookingSuccess(method="game"){
+  function openBookingSuccess(method="game",oneHour=false){
+    const bookedText=oneHour ? "1時間枠で予約しました。" : "予約しました。";
     if(method==="x"){
-      bookingSuccessMessage.innerHTML='予約しました。<br>予約時刻にXのDM（チャット）をご確認ください。<br>10分以内に応答がない場合はキャンセル扱いとなります。';
+      bookingSuccessMessage.innerHTML=bookedText+'<br>予約時刻にXのDM（チャット）をご確認ください。<br>10分以内に応答がない場合はキャンセル扱いとなります。';
     }else if(method==="companion"){
-      bookingSuccessMessage.innerHTML='予約しました。<br>コンパニオンアプリの3者専用チャットルームでご案内します。<br>よろしくお願いします。';
+      bookingSuccessMessage.innerHTML=bookedText+'<br>コンパニオンアプリの3者専用チャットルームでご案内します。<br>よろしくお願いします。';
     }else{
-      bookingSuccessMessage.innerHTML='予約しました。<br>当日はゲーム内でよろしくお願いします。';
+      bookingSuccessMessage.innerHTML=bookedText+'<br>当日はゲーム内でよろしくお願いします。';
     }
+    applyLanguage(bookingSuccessMessage);
     bookingSuccessLayer.classList.remove("hidden");
     bookingSuccessLayer.setAttribute("aria-hidden","false");
     bookingSuccessClose.focus();
@@ -3027,7 +3030,7 @@ button.slot .support-icon-x{font-size:18px}
       supportMethodPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
 
-      openBookingSuccess(bookedSupportMethod);
+      openBookingSuccess(bookedSupportMethod,result.durationMinutes===60);
       scrollToSlot(bookedKey);
 
       if(result.mode!=="normal"){
