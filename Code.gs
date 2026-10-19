@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.18.1',
+  APP_VERSION: '2026.10.19.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -9,6 +9,7 @@ const CONFIG = {
   RESERVATION_SHEET_NAME: '予約管理',
   MAINTENANCE_SHEET_NAME: 'メンテナンス',
   SPECIAL_RECEPTION_SHEET_NAME: '特別受付',
+  BOOKING_SETTINGS_SHEET_NAME: '予約設定',
 
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
@@ -61,7 +62,7 @@ function doGet(e) {
       let reservations = readReservations_(reservationSheet);
       reservations = reconcileReservationsForMaintenance_(reservationSheet, reservations, maintenance);
 
-      const window = getBookingWindow_();
+      const window = getBookingWindow_(privateSs);
 
       result = {
         ok: true,
@@ -559,20 +560,51 @@ function getFlexibleSlotCounts_(reservations, window, specialReception) {
   return counts;
 }
 
-function getBookingWindow_() {
-  const today = Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+function getBookingEndDateOverride_(reservationSs) {
+  const ss = reservationSs || getReservationSpreadsheet_();
+  const sheet = ss.getSheetByName(CONFIG.BOOKING_SETTINGS_SHEET_NAME);
+  if (!sheet) return '';
 
-  if (today < CONFIG.ROLLING_START_DATE) {
-    return {
-      start: CONFIG.START_DATE,
-      end: CONFIG.END_DATE
-    };
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return '';
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const key = String(values[i][0] || '').trim();
+    if (key !== '受付終了日') continue;
+
+    const value = values[i][1];
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      return Utilities.formatDate(value, CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+    }
+
+    const normalized = normalizeSheetDate_(String(value || '').trim());
+    return normalized || '';
   }
 
-  return {
-    start: today,
-    end: addDaysToDateKey_(today, CONFIG.ROLLING_DAYS - 1)
-  };
+  return '';
+}
+
+function getBookingWindow_(reservationSs) {
+  const today = Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+
+  let start;
+  let end;
+
+  if (today < CONFIG.ROLLING_START_DATE) {
+    start = CONFIG.START_DATE;
+    end = CONFIG.END_DATE;
+  } else {
+    start = today;
+    end = addDaysToDateKey_(today, CONFIG.ROLLING_DAYS - 1);
+  }
+
+  const configuredEnd = getBookingEndDateOverride_(reservationSs);
+  if (configuredEnd && configuredEnd < end) {
+    end = configuredEnd;
+  }
+
+  return { start: start, end: end };
 }
 
 function addDaysToDateKey_(dateKey, days) {
