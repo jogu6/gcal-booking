@@ -209,6 +209,17 @@ p,li{line-height:1.8}
   grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
   gap:8px;
 }
+.slot-gap-note{
+  grid-column:1 / -1;
+  padding:11px 14px;
+  border:1px dashed rgba(218,184,103,.45);
+  border-radius:9px;
+  background:rgba(0,0,0,.18);
+  color:#f2d69b;
+  text-align:center;
+  font-size:14px;
+  line-height:1.5;
+}
 button,input{
   font:inherit;
   -webkit-appearance:none;
@@ -1996,8 +2007,20 @@ button.slot .support-icon{
 
       const slots=document.createElement("div");
       slots.className="slots";
+      let previousInterval=null;
 
       for(const time of allTimes(d)){
+        const [hour,minute]=time.split(":").map(Number);
+        const startMinute=hour*60+minute;
+        const interval=hours.intervals.find(value=>startMinute>=value.startMinute && startMinute+30<=value.endMinute);
+        if(previousInterval && interval!==previousInterval && interval.startMinute>previousInterval.endMinute){
+          const gapNote=document.createElement("div");
+          gapNote.className="slot-gap-note";
+          gapNote.setAttribute("role","note");
+          gapNote.textContent="次の予約は "+time+"から";
+          slots.appendChild(gapNote);
+        }
+        previousInterval=interval;
         const key=`${d} ${time}`;
         const btn=document.createElement("button");
         btn.type="button";
