@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.28.1',
+  APP_VERSION: '2026.10.28.2',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -10,6 +10,7 @@ const CONFIG = {
   MAINTENANCE_SHEET_NAME: 'メンテナンス',
   SPECIAL_RECEPTION_SHEET_NAME: '特別受付',
   BOOKING_SETTINGS_SHEET_NAME: '予約設定',
+  BOOKING_HOURS_SHEET_NAME: '受付時間',
 
   TIME_ZONE: 'Asia/Tokyo',
   START_DATE: '2026-10-11',
@@ -63,6 +64,7 @@ function doGet(e) {
       reservations = reconcileReservationsForMaintenance_(reservationSheet, reservations, maintenance);
 
       const window = getBookingWindow_(privateSs);
+      const holidays = getHolidayDates_(window.start, window.end);
 
       result = {
         ok: true,
@@ -70,7 +72,8 @@ function doGet(e) {
         flexibleCounts: getFlexibleSlotCounts_(reservations, window, specialReception),
         maintenance: maintenance.map(publicMaintenance_),
         specialReception: specialReception.map(publicSpecialReception_),
-        holidays: getHolidayDates_(window.start, window.end),
+        holidays: holidays,
+        dailyHours: getDailyBookingHours_(privateSs, window.start, window.end, holidays),
         windowStart: window.start,
         windowEnd: window.end,
         version: CONFIG.APP_VERSION
@@ -243,11 +246,11 @@ function book_(input) {
       : '';
 
     if (oneHourBooking) {
-      if (!secondTime || (Number(secondTime.slice(0,2)) * 60 + Number(secondTime.slice(3,5))) >= CONFIG.END_MINUTE) {
+      if (!secondTime || !isWithinBookingHours_(input.bookingHours, input.time, 60)) {
         return {
           ok: false,
           code: 'ONE_HOUR_OUTSIDE_HOURS',
-          message: '1時間予約のため、22:00までの開始時刻を選択してください。'
+          message: '1時間予約がその日の受付終了時刻までに収まる開始時刻を選択してください。'
         };
       }
 
@@ -583,6 +586,63 @@ function getBookingEndDateOverride_(reservationSs) {
   }
 
   return '';
+}
+
+function bookingTimeMinute_(value, allowEndOfDay) {
+  const match = String(value || '').trim().match(/^(\d{1,2}):(00|30)$/);
+  if (!match) return NaN;
+  const minute = Number(match[1]) * 60 + Number(match[2]);
+  return minute >= 0 && (minute < 1440 || (allowEndOfDay && minute === 1440))
+    ? minute : NaN;
+}
+
+function getWeeklyBookingHours_(ss) {
+  const keys = ['日', '月', '火', '水', '木', '金', '土', '祝日'];
+  const schedule = {};
+  const sheet = ss.getSheetByName(CONFIG.BOOKING_HOURS_SHEET_NAME);
+  if (!sheet) {
+    keys.forEach(key => { schedule[key] = {startMinute: CONFIG.START_MINUTE, endMinute: CONFIG.END_MINUTE}; });
+    return schedule;
+  }
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('「受付時間」に曜日・祝日の設定がありません。');
+  sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues().forEach(row => {
+    const key = String(row[0] || '').trim();
+    if (!key && !String(row[1] || '').trim() && !String(row[2] || '').trim()) return;
+    if (!keys.includes(key) || schedule[key]) throw new Error('「受付時間」の区分が不正または重複しています：' + key);
+    const start = String(row[1] || '').trim(), end = String(row[2] || '').trim();
+    if (!start && !end) {
+      schedule[key] = {startMinute: 0, endMinute: 0};
+      return;
+    }
+    const startMinute = bookingTimeMinute_(start, false);
+    const endMinute = bookingTimeMinute_(end, true);
+    if (!Number.isFinite(startMinute) || !Number.isFinite(endMinute) || startMinute >= endMinute) {
+      throw new Error('「受付時間」の' + key + 'は、開始より後の終了時刻を30分単位で指定してください。日をまたぐ設定はできません。');
+    }
+    schedule[key] = {startMinute: startMinute, endMinute: endMinute};
+  });
+  keys.forEach(key => { if (!schedule[key]) throw new Error('「受付時間」に' + key + 'の行がありません。'); });
+  return schedule;
+}
+
+function getDailyBookingHours_(ss, start, end, holidayDates) {
+  const schedule = getWeeklyBookingHours_(ss);
+  const holidays = new Set(holidayDates || getHolidayDates_(start, end));
+  const hours = {};
+  for (let date = start; date <= end; date = addDaysToDateKey_(date, 1)) {
+    const parts = date.split('-').map(Number);
+    const weekday = ['日', '月', '火', '水', '木', '金', '土'][new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay()];
+    const key = holidays.has(date) ? '祝日' : weekday;
+    hours[date] = {startMinute: schedule[key].startMinute, endMinute: schedule[key].endMinute, category: key};
+  }
+  return hours;
+}
+
+function isWithinBookingHours_(hours, time, duration) {
+  const minute = bookingTimeMinute_(time, false);
+  return !!hours && Number.isFinite(minute) && minute >= hours.startMinute &&
+    minute + duration <= hours.endMinute;
 }
 
 function getBookingWindow_(reservationSs) {
@@ -1272,6 +1332,9 @@ function normalizeSheetDate_(value) {
 }
 
 function validateBooking_(input) {
+  if (input.supportMethod === 'x') {
+    throw new Error('Xによるサポートの受付は終了しました。ゲーム内またはコンパニオンアプリを選択してください。');
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date || '')) {
     throw new Error('日付が不正です。');
   }
@@ -1283,13 +1346,10 @@ function validateBooking_(input) {
     throw new Error('予約期間外です。');
   }
 
-  const [h, m] = input.time.split(':').map(Number);
-  const minute = h * 60 + m;
-  if (
-    minute < CONFIG.START_MINUTE ||
-    minute >= CONFIG.END_MINUTE ||
-    m % CONFIG.SLOT_MINUTES !== 0
-  ) {
+  const privateSs = getReservationSpreadsheet_();
+  const hours = getDailyBookingHours_(privateSs, input.date, input.date)[input.date];
+  input.bookingHours = hours;
+  if (!isWithinBookingHours_(hours, input.time, CONFIG.SLOT_MINUTES)) {
     throw new Error('予約可能時間外です。');
   }
 
@@ -1331,13 +1391,12 @@ function validateBooking_(input) {
     throw new Error('キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。');
   }
 
-  const allowedMethods = ['game', 'x', 'companion'];
+  const allowedMethods = ['game', 'companion'];
   if (!allowedMethods.includes(input.supportMethod)) {
     throw new Error('招待・登録サポート方法を選択してください。');
   }
 
   const allowedDc = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
-  const privateSs = getReservationSpreadsheet_();
   const maintenanceSheet = getSheetFrom_(privateSs, CONFIG.MAINTENANCE_SHEET_NAME);
   const maintenance = getMaintenancePeriodsFromSheet_(maintenanceSheet);
   const maintenanceState = getMaintenanceStateForSlot_(input.date, input.time, maintenance);
@@ -1363,16 +1422,7 @@ function validateBooking_(input) {
   if (!needsDc) input.dc = '';
   if (!needsWorld) input.world = '';
 
-  if (input.supportMethod === 'x') {
-    const raw = String(input.contact || '').trim();
-    const handle = raw.startsWith('@') ? raw.slice(1) : raw;
-    if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) {
-      throw new Error('X アカウント名が正しくありません。@og_ff14 のように入力してください。');
-    }
-    input.contact = '@' + handle;
-  } else {
-    input.contact = '';
-  }
+  input.contact = '';
 }
 
 function getMemberSheet_() {
@@ -1406,6 +1456,7 @@ function sanitizeCallback_(value) {
 // 祝日の唯一の参照元は専用マスタースプレッドシート。
 // 祝日マスターは日付昇順。受付期間に交差する行だけ読み取る。
 function getHolidayDates_(startDate, endDate) {
+  if (endDate < startDate) return [];
   const sheet = SpreadsheetApp.openById(CONFIG.HOLIDAY_SPREADSHEET_ID)
     .getSheetByName(CONFIG.HOLIDAY_SHEET_NAME);
   if (!sheet) throw new Error('祝日マスターの「祝日一覧」シートがありません。');
@@ -1442,7 +1493,7 @@ function getHolidayDates_(startDate, endDate) {
       ? Utilities.formatDate(value, CONFIG.TIME_ZONE, 'yyyy-MM-dd')
       : String(value || '').trim();
     if (key > endDate) break;
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(key) && key >= startDate) result.push(key);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(key) && key >= startDate) result.push(key);
   }
   return [...new Set(result)];
 }
