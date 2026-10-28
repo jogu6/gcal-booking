@@ -79,7 +79,7 @@ test('holiday master returns ISO text and Date cells with inclusive boundaries',
 });
 
 test('historical X rows retain their method and contact and remain cancelable',()=>{
- const c=context(),rows=[['Test Member','2099/1/1','20:00','','','X','@test','','','','通常予約','']];
+ const c=context(),rows=[['Test Member','2099/1/1','20:00','','X','@test','','','','通常予約','']];
  const sheet={getLastRow:()=>2,getRange:()=>({getDisplayValues:()=>rows}),deleteRow:row=>{assert.equal(row,2);rows.length=0;}};
  const reservation=c.readReservations_(sheet)[0];assert.equal(reservation.supportMethod,'x');assert.equal(reservation.contact,'@test');
  c.getReservationSheet_=()=>sheet;c.shouldNotifyAllReservationEvents_=()=>false;c.LockService={getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{}})};

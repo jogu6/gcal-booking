@@ -291,32 +291,6 @@ input:not([type="hidden"]):focus{
     0 0 0 2px rgba(89,142,194,.18),
     inset 0 1px 3px rgba(0,0,0,.55);
 }
-#world{
-  width:100%;
-  min-height:48px;
-  padding:10px 12px;
-  border:1px solid rgba(190,207,224,.38);
-  border-radius:7px;
-  background:#17212c;
-  color:#e8eef5;
-  outline:none;
-  color-scheme:dark;
-}
-#world:focus{
-  border-color:rgba(156,199,239,.65);
-  box-shadow:0 0 0 2px rgba(89,142,194,.18);
-}
-#world option{
-  background-color:#17212c;
-  color:#e8eef5;
-}
-#world option:checked{
-  background-color:#345f8c;
-  color:#ffffff;
-}
-#world option:disabled{
-  color:#8ea0b3;
-}
 .chosen{
   padding:12px 14px;
   border:1px solid rgba(184,202,220,.32);
@@ -564,45 +538,21 @@ button.slot.transition-buffer{
 }
 .prep-note{
   margin:18px 0 20px;
-  padding:14px 16px;
-  border:1px solid rgba(199,170,112,.48);
+  padding:16px;
+  border:1px solid #698298;
   border-radius:9px;
-  background:linear-gradient(180deg,rgba(62,53,35,.72),rgba(42,37,27,.76));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 4px 14px rgba(0,0,0,.16);
-  color:#f3ead6;
-  line-height:1.75;
+  background:#1c2a38;
+  color:#edf4fa;
+  line-height:1.65;
 }
-.prep-note strong{
-  color:#fff3cf;
-  font-size:1.04em;
-}
-.registration-guide-note{
-  margin:18px 0 20px;
-  padding:15px 16px;
-  border:1px solid rgba(126,181,222,.48);
-  border-radius:9px;
-  background:linear-gradient(180deg,rgba(35,58,78,.76),rgba(26,44,60,.82));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 4px 14px rgba(0,0,0,.16);
-  color:#e9f4fc;
-  line-height:1.75;
-}
-.registration-guide-note strong{
-  color:#fff;
-  font-size:1.04em;
-}
-.registration-guide-link{
-  display:inline-block;
-  margin-top:10px;
-  padding:9px 14px;
-  border:1px solid rgba(193,210,227,.42);
-  border-radius:7px;
-  background:linear-gradient(180deg,#365777,#28425e);
-  color:#fff;
-  font-weight:700;
-  text-decoration:none;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 7px rgba(0,0,0,.24);
-}
-.registration-guide-link:hover{filter:brightness(1.08)}
+.prep-note .login-title{margin:0 0 4px;font-size:19px;color:#fff}
+.prep-note .login-intro{margin:0 0 12px;color:#edf4fa}
+.login-method{padding:12px 14px;border:1px solid #526c82;border-radius:8px;background:#111e2b}
+.login-method + .login-method{margin-top:10px}
+.login-method h3{margin:0 0 4px;font-size:17px;color:#a9d9ff}
+.login-method p{margin:0;font-size:15px;line-height:1.65;color:#edf4fa}
+.login-method .auth-app-help{margin-top:6px;font-size:13px;color:#c6d6e3}
+.prep-note .login-help{margin:12px 0 0;font-size:14px;color:#edf4fa}
 .auth-links{
   display:flex;
   flex-wrap:wrap;
@@ -1115,14 +1065,16 @@ button.slot .support-icon{
     <div id="flexibleReceptionSchedule" class="flexible-policy-note hidden"></div>
 
     <div class="prep-note">
-      <strong>ログイン方法を選べます</strong><br>
-      <strong>パスキーでもログインできます。</strong>スマホやパソコンに「ログイン用の鍵」を保存し、いつもの画面ロック解除と同じように、指紋・顔認証や端末の暗証番号（PIN）で本人確認する方法です。<br>
-      パスキーを登録した後は、対応する端末でパスワードや認証アプリの確認コードを入力せずにログインできます。使える方法は端末によって異なります。<br>
-      設定画面でパスキーの登録を選び、端末に表示される案内に沿って操作してください。暗証番号はご自身の端末に入力するもので、サポート担当者へ伝える必要はありません。<br>
-      <strong>設定が不安な方は、予約当日に一緒に確認します。</strong><br><br>
-      <strong>認証アプリを使う場合</strong><br>
-      スマホなら Google 認証システム（Authenticator）アプリ、PCなら Authenticator Chrome拡張機能をご用意ください。
-
+      <h2 class="login-title">ログイン方法は2つ</h2>
+      <p class="login-intro">どちらか1つを選べます。</p>
+      <section class="login-method" aria-labelledby="passkeyMethodTitle">
+        <h3 id="passkeyMethodTitle">① パスキー</h3>
+        <p>指紋・顔認証や、端末の暗証番号でログイン。</p>
+      </section>
+      <section class="login-method" aria-labelledby="authenticatorMethodTitle">
+        <h3 id="authenticatorMethodTitle">② 認証アプリ</h3>
+        <p>アプリに表示される確認コードでログイン。</p>
+        <p class="auth-app-help">スマホ：Google 認証システム<br>PC：Authenticator Chrome拡張機能</p>
       <div class="auth-links">
         <a id="googlePlayBadgeLink" class="store-badge" href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=ja" target="_blank" rel="noopener noreferrer" aria-label="Google PlayでGoogle 認証システムを開く">
           <img id="googlePlayBadgeImage" src="https://play.google.com/intl/en_us/badges/static/images/badges/ja_badge_web_generic.png" alt="Google Play で手に入れよう">
@@ -1134,13 +1086,8 @@ button.slot .support-icon{
           Authenticator Chrome拡張機能
         </a>
       </div>
-    </div>
-
-    <div class="registration-guide-note">
-      <strong>登録操作に不安がある方へ</strong><br>
-      スマートフォンの基本操作に自信がない方、コピー・貼り付けの意味が分からない方、ワンタイムパスワードを初めて使う方は、事前に「登録の手引き」をご確認ください。<br>
-      画像付きで、招待URLを開いてから登録が完了するまで順番に説明しています。<br>
-      <a class="registration-guide-link" href="https://jogu6.github.io/gcal/t/r/" target="_blank" rel="noopener noreferrer">登録の手引きを見る</a>
+      </section>
+      <p class="login-help">設定が不安な方は、予約当日に一緒に進めましょう。</p>
     </div>
 
     <h2>招待・登録サポート方法</h2>
@@ -1165,15 +1112,11 @@ button.slot .support-icon{
     </div>
     <ol>
       <li>予約時刻までに、選択したサポート方法ですぐ対応できる状態にしてください。</li>
-      <li>ゲーム内対応はFF14へログインし、指定がある場合は集合DC・ワールドへ移動してください。</li>
+      <li>ゲーム内対応はFF14へログインし、指定がある場合は集合DCへ移動してください。</li>
       <li>コンパニオンアプリ対応は、リーダーを含む3者専用チャットルームをご確認ください。</li>
       <li>招待URLから登録し、正常にログインできるところまでサポートします。</li>
     </ol>
 
-    <div class="notice">
-      <strong>ゲーム内対応：</strong>10月11日・12日は集合希望DCを指定してください。10月12日の18:30枠までは集合希望ワールドも必須です。<br>
-      <strong>コンパニオンアプリ対応：</strong>集合DC・ワールドの指定は不要です。
-    </div>
 
     <p class="small">予約済みの枠には時間帯だけ「予約済み」と表示します。予約者のキャラクター名やDCなどは他の方には表示されません。</p>
     <div class="notice booking-guidance">
@@ -1259,13 +1202,6 @@ button.slot .support-icon{
         </div>
       </div>
 
-      <div id="worldRow" class="row hidden">
-        <label for="world">集合希望ワールド</label>
-        <select id="world">
-          <option value="">ワールドを選択してください</option>
-        </select>
-        <div class="small">ホームワールドを初期値として表示します。必要に応じて変更してください。</div>
-      </div>
 
       <button id="submitButton" class="primary" type="submit">この日時で予約する</button>
       <div id="message"></div>
@@ -1290,7 +1226,7 @@ button.slot .support-icon{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbwOYbRPlEyE6EGLN-lXyCbtsBE9pVPt9sDC1x1r99X2L-oGTB8i282SOKRRyMFJT3Hjcw/exec";
-  const EXPECTED_API_VERSION = "2026.10.28.3";
+  const EXPECTED_API_VERSION = "2026.10.28.4";
 
   let START_DATE = "2026-10-11";
 
@@ -1700,7 +1636,6 @@ button.slot .support-icon{
     verifiedMemberName="";
     verifiedOneHour=false;
     dcRow.classList.add("hidden");
-    worldRow.classList.add("hidden");
     supportMethodPanel.classList.add("hidden");
     companionSupportNote.classList.add("hidden");
 
@@ -1747,12 +1682,8 @@ button.slot .support-icon{
       verifiedMemberName=normalizeName(name);
       supportMethodPanel.classList.remove("hidden");
 
-      worldInput.dataset.homeWorld=result.world || "";
       const initialDc=result.meetingDc || result.dc || "";
-      const initialWorld=
-        result.meetingWorld ||
-        (initialDc===result.dc ? (result.world || "") : "");
-      setDcValue(initialDc,initialWorld);
+      setDcValue(initialDc);
 
       let initialMethod=result.canCancel ? (result.supportMethod || "") : "";
 
@@ -1787,7 +1718,6 @@ button.slot .support-icon{
       verifiedOneHour=false;
       updateSelectedDisplay();
       document.getElementById("dcRow").classList.add("hidden");
-      worldRow.classList.add("hidden");
       supportMethodPanel.classList.add("hidden");
       setDcValue("");
       setSupportMethod("");
@@ -2159,7 +2089,6 @@ button.slot .support-icon{
     document.getElementById("characterName").value="";
     document.getElementById("flexibleSelectedNotice").classList.add("hidden");
     document.getElementById("dcRow").classList.add("hidden");
-    worldRow.classList.add("hidden");
     setDcValue("");
     setSupportMethod("");
     supportMethodPanel.classList.add("hidden");
@@ -2235,7 +2164,6 @@ button.slot .support-icon{
     verifiedOneHour=false;
     updateSelectedDisplay();
     dcRow.classList.add("hidden");
-    document.getElementById("worldRow").classList.add("hidden");
     
     setDcValue("");
     setSupportMethod("");
@@ -2248,14 +2176,6 @@ button.slot .support-icon{
 
 
   const dcInput=document.getElementById("dc");
-  const worldRow=document.getElementById("worldRow");
-  const worldInput=document.getElementById("world");
-  const WORLDS_BY_DC={
-    Elemental:["Aegis","Atomos","Carbuncle","Garuda","Gungnir","Kujata","Tonberry","Typhon"],
-    Gaia:["Alexander","Bahamut","Durandal","Fenrir","Ifrit","Ridill","Tiamat","Ultima"],
-    Mana:["Anima","Asura","Chocobo","Hades","Ixion","Masamune","Pandaemonium","Titan"],
-    Meteor:["Belias","Mandragora","Ramuh","Shinryu","Unicorn","Valefor","Yojimbo","Zeromus"]
-  };
   const supportMethodPanel=document.getElementById("supportMethodPanel");
   const supportMethodInput=document.getElementById("supportMethod");
   const supportMethodDescription=document.getElementById("supportMethodDescription");
@@ -2267,13 +2187,8 @@ button.slot .support-icon{
       method==="game" &&
       selected &&
       (selected.date==="2026-10-11" || selected.date==="2026-10-12");
-    const needsWorld=
-      needsDc &&
-      selected.date==="2026-10-12" &&
-      selected.time<="18:30";
 
     document.getElementById("dcRow").classList.toggle("hidden",!needsDc);
-    worldRow.classList.toggle("hidden",!needsWorld);
     companionSupportNote.classList.toggle("hidden",method!=="companion");
 
     if(method==="game"){
@@ -2305,42 +2220,13 @@ button.slot .support-icon{
     });
   });
 
-  function setWorldOptions(dc, preferred=""){
-    const worlds=WORLDS_BY_DC[dc] || [];
-    const preferredWorld=String(preferred || "").trim();
-
-    worldInput.innerHTML="";
-    const placeholder=document.createElement("option");
-    placeholder.value="";
-    placeholder.textContent="ワールドを選択してください";
-    placeholder.disabled=true;
-    worldInput.appendChild(placeholder);
-
-    let matched=false;
-    worlds.forEach(world=>{
-      const option=document.createElement("option");
-      option.value=world;
-      option.textContent=world;
-      if(world===preferredWorld){
-        option.selected=true;
-        matched=true;
-      }
-      worldInput.appendChild(option);
-    });
-
-    if(!matched){
-      placeholder.selected=true;
-    }
-  }
-
-  function setDcValue(value, preferredWorld=""){
+  function setDcValue(value){
     dcInput.value=value || "";
     document.querySelectorAll(".dc-choice").forEach(btn=>{
       const selected=btn.dataset.value===value;
       btn.classList.toggle("selected",selected);
       btn.setAttribute("aria-checked",selected ? "true" : "false");
     });
-    setWorldOptions(value || "",preferredWorld);
   }
 
   document.querySelectorAll(".dc-choice").forEach(btn=>{
@@ -2417,11 +2303,10 @@ button.slot .support-icon{
 
       cancelMember=result;
       const dcText=result.meetingDc || result.dc || "DC指定なし";
-      const worldText=result.meetingWorld || "ワールド指定なし";
       const methodText=result.supportMethod==="x"
         ? "X"
         : (result.supportMethod==="companion" ? "コンパニオンアプリ" : "ゲーム内");
-      cancelDc.textContent="対応方法: "+methodText+" / 集合DC: "+dcText+" / 集合ワールド: "+worldText;
+      cancelDc.textContent="対応方法: "+methodText+" / 集合DC: "+dcText;
       cancelDc.classList.remove("hidden");
       resetCancelConfirm();
 
@@ -2509,15 +2394,6 @@ button.slot .support-icon{
       (selected.date==="2026-10-11" || selected.date==="2026-10-12");
     if(needsDc && !dc) return showMessage("ゲーム内対応では、集合希望DCを選択してください。","error");
 
-    const needsWorld=
-      needsDc &&
-      selected.date==="2026-10-12" &&
-      selected.time<="18:30";
-    const world=worldInput.value;
-    if(needsWorld && !world){
-      worldInput.focus();
-      return showMessage("ゲーム内対応では、集合希望ワールドを選択してください。","error");
-    }
 
 
     openBookingConfirm({
@@ -2525,7 +2401,6 @@ button.slot .support-icon{
       time:selected.time,
       name:name,
       dc:dc,
-      world:world,
       supportMethod:supportMethod
     });
   });
@@ -2554,7 +2429,6 @@ button.slot .support-icon{
         time:request.time,
         name:request.name,
         dc:request.dc,
-        world:request.world,
         supportMethod:request.supportMethod
       },"予約を登録しています…");
 
@@ -2574,7 +2448,6 @@ button.slot .support-icon{
       verifiedOneHour=false;
       document.getElementById("characterName").value="";
       setDcValue("");
-      worldRow.classList.add("hidden");
       setSupportMethod("");
       supportMethodPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");

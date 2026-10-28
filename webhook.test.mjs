@@ -41,3 +41,43 @@ test('booking webhook retry preserves notification ID and separates input errors
 test('booking webhook remains inactive without a configured secret URL',async()=>{
   const f=await fixture();f.properties.delete('GCAL_BOARD_WEBHOOK_URL');f.context.notifyDiscordReservationCreated_({name:'Test'});assert.equal(f.rows.length,0);assert.equal(f.sent.length,0);assert.throws(()=>f.context.installBoardWebhookDelivery());
 });
+
+test('Discord and board share concise fields, time ranges and changes without world or empty contacts',async()=>{
+ const f=await fixture(),c=f.context;f.properties.set('DISCORD_WEBHOOK_URL','https://discord.invalid/test');
+ const before={name:'Test Member',date:'2026-11-01',time:'14:00',supportMethod:'game',mode:'normal',oneHourBooking:false};
+ const after={...before,time:'15:00',supportMethod:'companion',oneHourBooking:true,meetingWorld:'legacy ignored'};
+ c.notifyDiscordReservationCreated_(after);c.notifyDiscordReservationChanged_(before,after);c.notifyDiscordReservationCancelled_(after);
+ const embeds=f.sent.map(item=>JSON.parse(item.options.payload).embeds[0]);
+ assert.equal(embeds.length,3);
+ for(const embed of embeds){
+  const names=embed.fields.map(field=>field.name);assert.equal(names.includes('集合ワールド'),false);assert.equal(names.includes('集合DC'),false);assert.equal(names.includes('連絡先'),false);
+  assert.equal(embed.fields.find(field=>field.name==='予約日時').value,'2026-11-01 15:00～16:00');
+  assert.equal(embed.fields.find(field=>field.name==='予約時間').value,'60分');
+ }
+ const changed=embeds[1].fields;
+ assert.equal(changed.find(field=>field.name==='変更前日時').value,'2026-11-01 14:00～14:30');assert.match(changed.find(field=>field.name==='変更内容').value,/ゲーム内 → コンパニオンアプリ/);
+ const board=c.boardReservationText_('予約変更',after,before);assert.doesNotMatch(board,/ワールド|連絡先：なし/);assert.equal((c.boardReservationText_('新規予約',after).match(/予約時間：/g)||[]).length,1);assert.match(board,/受付方式：\*\* 通常予約/);
+ assert.equal(c.hasReservationChanged_(before,{...before,oneHourBooking:true}),true);assert.equal(c.hasReservationChanged_(before,{...before}),false);
+ assert.equal(c.reservationDateTime_({...before,time:'23:30'}),'2026-11-01 23:30～24:00');
+ const historical=c.reservationFields_({...before,supportMethod:'x',contact:'@old'});assert.equal(historical.find(field=>field.name==='連絡先').value,'@old');
+});
+
+test('automatic cancellations include reasons on both destinations and split Discord embeds by 10',async()=>{
+ const f=await fixture(),c=f.context;f.properties.set('DISCORD_WEBHOOK_URL','https://discord.invalid/test');
+ const reservation={name:'Test Member',date:'2026-11-01',time:'14:00',supportMethod:'game'};
+ const period={start:'2026-11-01T13:00',end:'2026-11-01T16:00',startMs:c.localStampToPseudoMs_('2026-11-01 13:00'),endMs:c.localStampToPseudoMs_('2026-11-01 16:00'),blockGame:true,message:'メンテナンス'};
+ c.notifyDiscordAutoCancelled_(Array.from({length:21},()=>({...reservation})),[period]);
+ const batches=f.sent.map(item=>JSON.parse(item.options.payload).embeds);assert.deepEqual(batches.map(batch=>batch.length),[10,10,1]);
+ assert.ok(batches.flat().every(embed=>embed.fields.some(field=>field.name==='取消理由' && field.value==='ゲーム内停止')));
+ assert.equal(f.rows.length,22);assert.match(f.rows[1][2],/取消理由：\*\* ゲーム内停止/);assert.match(f.rows[1][2],/該当時間：/);assert.doesNotMatch(f.rows[1][2],/ワールド/);
+});
+
+
+test('board Markdown decorates labels while escaping literal member text and multiline reasons',async()=>{
+ const f=await fixture(),c=f.context;
+ const text=c.boardReservationText_('予約変更',{name:'Player_* [One]',date:'2026-11-01',time:'14:00',supportMethod:'game'},null,[{name:'取消理由',value:'点検\n**入力内容**'}]);
+ assert.ok(text.startsWith('## 予約変更\n\n'));
+ assert.match(text,/- \*\*キャラクター名：\*\* Player\\_\\\* \\\[One\\\]/);
+ assert.match(text,/- \*\*予約日時：\*\* 2026\\-11\\-01 14:00～14:30/);
+ assert.match(text,/- \*\*取消理由：\*\* 点検\n  - \\\*\\\*入力内容\\\*\\\*/);
+});

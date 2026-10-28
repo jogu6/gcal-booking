@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.28.3',
+  APP_VERSION: '2026.10.28.4',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -29,19 +29,18 @@ const CONFIG = {
   MEMBER_COL_STATUS: 5,
   MEMBER_COL_ONE_HOUR: 6,
 
-  // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC E=集合ワールド
-  // F=対応方法 G=連絡先 H=更新日時 I=対応状況 J=対象者に連絡 K=受付方式 L=備考
+  // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC E=対応方法
+  // F=連絡先 G=更新日時 H=対応状況 I=対象者に連絡 J=受付方式 K=備考
   RES_FIRST_DATA_ROW: 2,
   RES_COL_NAME: 1,
   RES_COL_DATE: 2,
   RES_COL_TIME: 3,
   RES_COL_MEETING_DC: 4,
-  RES_COL_MEETING_WORLD: 5,
-  RES_COL_SUPPORT_METHOD: 6,
-  RES_COL_CONTACT: 7,
-  RES_COL_UPDATED_AT: 8,
-  RES_COL_MODE: 11,
-  RES_COL_REMARKS: 12
+  RES_COL_SUPPORT_METHOD: 5,
+  RES_COL_CONTACT: 6,
+  RES_COL_UPDATED_AT: 7,
+  RES_COL_MODE: 10,
+  RES_COL_REMARKS: 11
 };
 
 function doGet(e) {
@@ -88,7 +87,6 @@ function doGet(e) {
         time: e.parameter.time,
         name: e.parameter.name,
         dc: e.parameter.dc || '',
-        world: e.parameter.world || '',
         supportMethod: e.parameter.supportMethod || (e.parameter.useX === '1' ? 'x' : 'game'),
         contact: e.parameter.contact || e.parameter.xAccount || '',
         language: e.parameter.lang === 'en' ? 'en' : 'ja'
@@ -124,7 +122,6 @@ function member_(name) {
 
   const homeParts = member.home.split('/');
   const homeDc = homeParts[0] || '';
-  const homeWorld = homeParts.length > 1 ? homeParts.slice(1).join('/').trim() : '';
 
   const reservation = findReservationInRows_(readReservations_(getReservationSheet_()), normalized);
   const hasBooking = !!reservation && !!reservation.date && !!reservation.time;
@@ -134,11 +131,9 @@ function member_(name) {
     ok: true,
     found: true,
     dc: ['Elemental','Gaia','Mana','Meteor'].includes(homeDc) ? homeDc : '',
-    world: homeWorld,
     meetingDc: hasBooking && ['Elemental','Gaia','Mana','Meteor'].includes(reservation.meetingDc)
       ? reservation.meetingDc
       : '',
-    meetingWorld: hasBooking ? reservation.meetingWorld || '' : '',
     eligible: member.status === 'ご予約待ち/ご予約中' && joinEligibility.allowed,
     code: joinEligibility.code || '',
     message: joinEligibility.message || '',
@@ -348,7 +343,6 @@ function book_(input) {
       date: input.date,
       time: input.time,
       meetingDc: input.dc || '',
-      meetingWorld: input.world || '',
       supportMethod: input.supportMethod,
       contact: input.contact || '',
       useX: input.supportMethod === 'x',
@@ -463,23 +457,22 @@ function readReservations_(sheet) {
         const dcValue = String(values[i][3] || '').trim();
         return dcValue === '(DC指定省略)' ? '' : dcValue;
       })(),
-      meetingWorld: String(values[i][4] || '').trim(),
       supportMethod: (() => {
-        const methodValue = String(values[i][5] || '').trim();
+        const methodValue = String(values[i][CONFIG.RES_COL_SUPPORT_METHOD - 1] || '').trim();
         if (methodValue === 'X' || methodValue.toLowerCase() === 'true' || methodValue === 'Xでやりとりを希望' || methodValue === '希望します') return 'x';
         if (methodValue === 'コンパニオンアプリ') return 'companion';
         return 'game';
       })(),
-      contact: String(values[i][6] || '').trim(),
+      contact: String(values[i][CONFIG.RES_COL_CONTACT - 1] || '').trim(),
       useX: (() => {
-        const methodValue = String(values[i][5] || '').trim();
+        const methodValue = String(values[i][CONFIG.RES_COL_SUPPORT_METHOD - 1] || '').trim();
         return methodValue === 'X' || methodValue.toLowerCase() === 'true' || methodValue === 'Xでやりとりを希望' || methodValue === '希望します';
       })(),
-      xAccount: String(values[i][6] || '').trim(),
-      updatedAt: String(values[i][7] || '').trim(),
-      mode: String(values[i][10] || '').trim() === '随時受付' ? 'flexible' : 'normal',
-      remarks: String(values[i][11] || '').trim(),
-      oneHourBooking: String(values[i][11] || '').includes('1時間予約')
+      xAccount: String(values[i][CONFIG.RES_COL_CONTACT - 1] || '').trim(),
+      updatedAt: String(values[i][CONFIG.RES_COL_UPDATED_AT - 1] || '').trim(),
+      mode: String(values[i][CONFIG.RES_COL_MODE - 1] || '').trim() === '随時受付' ? 'flexible' : 'normal',
+      remarks: String(values[i][CONFIG.RES_COL_REMARKS - 1] || '').trim(),
+      oneHourBooking: String(values[i][CONFIG.RES_COL_REMARKS - 1] || '').includes('1時間予約')
     });
   }
 
@@ -1027,53 +1020,55 @@ function sendDiscordReservationEmbed_(embed) {
   }
 }
 
-function reservationFields_(reservation) {
-  return [
-    {
-      name: 'キャラクター名',
-      value: reservation.name || '不明',
-      inline: false
-    },
-    {
-      name: '予約日時',
-      value: (reservation.date || '') + ' ' + (reservation.time || ''),
-      inline: false
-    },
-    {
-      name: '集合DC',
-      value: reservation.meetingDc || '(DC指定省略)',
-      inline: false
-    },
-    {
-      name: '集合ワールド',
-      value: reservation.meetingWorld || '(ワールド指定省略)',
-      inline: false
-    },
-    {
-      name: '対応方法',
-      value: reservation.supportMethod === 'x'
-        ? 'X'
-        : (reservation.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
-      inline: false
-    },
-    {
-      name: '連絡先',
-      value: reservation.supportMethod === 'x' && reservation.contact ? reservation.contact : 'なし',
-      inline: false
-    }
-  ];
+function supportMethodLabel_(method) {
+  return method === 'x' ? 'X' : (method === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内');
 }
 
+function reservationDateTime_(reservation) {
+  const time = reservation.time || '';
+  const minute = bookingTimeMinute_(time, false);
+  const end = minute + (reservation.oneHourBooking ? 60 : 30);
+  const endTime = Number.isFinite(minute)
+    ? String(Math.floor(end / 60)).padStart(2, '0') + ':' + String(end % 60).padStart(2, '0') : '';
+  return (reservation.date || '日付未設定') + ' ' + (time || '時刻未設定') + (endTime ? '～' + endTime : '');
+}
+
+function reservationFields_(reservation, before) {
+  const field = (name, value) => ({name: name, value: value, inline: false});
+  const fields = [field('キャラクター名', reservation.name || '不明')];
+  if (before && reservationDateTime_(before) !== reservationDateTime_(reservation)) {
+    fields.push(field('変更前日時', reservationDateTime_(before)));
+  }
+  fields.push(field('予約日時', reservationDateTime_(reservation)));
+  fields.push(field('予約時間', reservation.oneHourBooking ? '60分' : '30分'));
+  fields.push(field('対応方法', supportMethodLabel_(reservation.supportMethod)));
+  fields.push(field('受付方式', reservation.mode === 'flexible' ? '随時受付' : '通常予約'));
+  if (reservation.meetingDc && reservation.meetingDc !== '(DC指定省略)') fields.push(field('集合DC', reservation.meetingDc));
+  if (reservation.supportMethod === 'x' && reservation.contact) fields.push(field('連絡先', reservation.contact));
+  if (before) {
+    const changes = [];
+    const properties = [
+      ['対応方法', item => supportMethodLabel_(item.supportMethod)],
+      ['予約時間', item => item.oneHourBooking ? '60分' : '30分'],
+      ['受付方式', item => item.mode === 'flexible' ? '随時受付' : '通常予約'],
+      ['集合DC', item => item.meetingDc && item.meetingDc !== '(DC指定省略)' ? item.meetingDc : '指定なし'],
+      ['連絡先', item => item.supportMethod === 'x' && item.contact ? item.contact : 'なし']
+    ];
+    properties.forEach(([label, value]) => { if (value(before) !== value(reservation)) changes.push(label + '：' + value(before) + ' → ' + value(reservation)); });
+    if (changes.length) fields.push(field('変更内容', changes.join('\n')));
+  }
+  return fields;
+}
 
 function hasReservationChanged_(before, after) {
   return (
     String(before.date || '') !== String(after.date || '') ||
     String(before.time || '') !== String(after.time || '') ||
     String(before.meetingDc || '') !== String(after.meetingDc || '') ||
-    String(before.meetingWorld || '') !== String(after.meetingWorld || '') ||
     String(before.supportMethod || 'game') !== String(after.supportMethod || 'game') ||
     String(before.contact || '') !== String(after.contact || '') ||
-    String(before.mode || 'normal') !== String(after.mode || 'normal')
+    String(before.mode || 'normal') !== String(after.mode || 'normal') ||
+    !!before.oneHourBooking !== !!after.oneHourBooking
   );
 }
 
@@ -1087,48 +1082,7 @@ function notifyDiscordReservationCreated_(reservation) {
 
 function notifyDiscordReservationChanged_(before, after) {
   queueBoardReservation_('予約変更', after, before);
-  sendDiscordReservationEmbed_({
-    title: '予約変更',
-    fields: [
-      {
-        name: 'キャラクター名',
-        value: after.name || before.name || '不明',
-        inline: false
-      },
-      {
-        name: '変更前',
-        value: (before.date || '') + ' ' + (before.time || ''),
-        inline: false
-      },
-      {
-        name: '変更後',
-        value: (after.date || '') + ' ' + (after.time || ''),
-        inline: false
-      },
-      {
-        name: '集合DC',
-        value: after.meetingDc || '(DC指定省略)',
-        inline: false
-      },
-      {
-        name: '集合ワールド',
-        value: after.meetingWorld || '(ワールド指定省略)',
-        inline: false
-      },
-      {
-        name: '対応方法',
-        value: after.supportMethod === 'x'
-          ? 'X'
-          : (after.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
-        inline: false
-      },
-      {
-        name: '連絡先',
-        value: after.supportMethod === 'x' && after.contact ? after.contact : 'なし',
-        inline: false
-      }
-    ]
-  });
+  sendDiscordReservationEmbed_({title: '予約変更', fields: reservationFields_(after, before)});
 }
 
 function notifyDiscordReservationCancelled_(reservation) {
@@ -1140,102 +1094,30 @@ function notifyDiscordReservationCancelled_(reservation) {
 }
 
 function notifyDiscordAutoCancelled_(reservations, maintenance) {
-  reservations.forEach(reservation => queueBoardReservation_('メンテナンスによる予約の自動キャンセル', reservation));
-  const webhookUrl = PropertiesService
-    .getScriptProperties()
-    .getProperty('DISCORD_WEBHOOK_URL');
-
-  if (!webhookUrl) return;
-
+  const title = 'メンテナンスによる予約の自動キャンセル';
   const embeds = reservations.map(reservation => {
-    const state = getMaintenanceStateForSlot_(
-      reservation.date,
-      reservation.time,
-      maintenance
-    );
-
-    const fields = [
-      {
-        name: 'キャラクター名',
-        value: reservation.name || '不明',
-        inline: false
-      },
-      {
-        name: '予約日時',
-        value: (reservation.date || '') + ' ' + (reservation.time || ''),
-        inline: false
-      },
-      {
-        name: '集合DC',
-        value: reservation.meetingDc || '(DC指定省略)',
-        inline: false
-      },
-      {
-        name: '集合ワールド',
-        value: reservation.meetingWorld || '(ワールド指定省略)',
-        inline: false
-      },
-      {
-        name: '対応方法',
-        value: reservation.supportMethod === 'x'
-          ? 'X'
-          : (reservation.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
-        inline: false
-      }
-    ];
-
+    const state = getMaintenanceStateForSlot_(reservation.date, reservation.time, maintenance);
+    const extra = [];
     if (state.matches.length) {
-      const serviceLabels = [];
-      if (state.blockGame) serviceLabels.push('ゲーム内停止');
-      if (state.blockX) serviceLabels.push('X停止');
-      if (state.blockCompanion) serviceLabels.push('コンパニオン停止');
-
-      fields.push({
-        name: '停止中の対応方法',
-        value: serviceLabels.join(' / '),
-        inline: false
-      });
-
-      const periodText = state.matches
-        .map(period =>
-          period.start.replace('T',' ') + ' ～ ' + period.end.replace('T',' ') +
-          (period.message ? ' / ' + period.message : '')
-        )
-        .join('\n');
-
-      fields.push({
-        name: '該当時間',
-        value: periodText,
-        inline: false
-      });
+      const stopped = [];
+      if (state.blockGame) stopped.push('ゲーム内停止');
+      if (state.blockX) stopped.push('X停止');
+      if (state.blockCompanion) stopped.push('コンパニオン停止');
+      extra.push({name: '取消理由', value: stopped.join(' / '), inline: false});
+      extra.push({name: '該当時間', value: state.matches.map(period => period.start.replace('T', ' ') + ' ～ ' + period.end.replace('T', ' ') + (period.message ? ' / ' + period.message : '')).join('\n'), inline: false});
     }
-
-    return {
-      title: 'メンテナンスによる予約の自動キャンセル',
-      fields: fields,
-      footer: {
-        text: '予約管理シートから自動削除済み'
-      }
-    };
+    queueBoardReservation_(title, reservation, null, extra);
+    return {title: title, fields: reservationFields_(reservation).concat(extra), footer: {text: '予約管理シートから自動削除済み'}};
   });
-
-  const payload = { embeds: embeds };
-
-  const response = UrlFetchApp.fetch(webhookUrl, {
-    method: 'post',
-    contentType: 'application/json',
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  });
-
-  const status = response.getResponseCode();
-  if (status < 200 || status >= 300) {
-    throw new Error(
-      'Discord Webhook通知に失敗しました。HTTP ' +
-      status +
-      ': ' +
-      response.getContentText()
-    );
+  const webhookUrl = PropertiesService.getScriptProperties().getProperty('DISCORD_WEBHOOK_URL');
+  if (!webhookUrl) return;
+  // Discord permits up to 10 embeds in one request.
+  for (let index = 0; index < embeds.length; index += 10) {
+    const response = UrlFetchApp.fetch(webhookUrl, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify({embeds: embeds.slice(index, index + 10)}), muteHttpExceptions: true
+    });
+    const status = response.getResponseCode();
+    if (status < 200 || status >= 300) throw new Error('Discord Webhook通知に失敗しました。HTTP ' + status);
   }
 }
 
@@ -1285,7 +1167,6 @@ function upsertReservation_(sheet, existing, data) {
     data.date,
     data.time,
     data.meetingDc || '(DC指定省略)',
-    data.meetingWorld || '',
     data.supportMethod === 'x'
       ? 'X'
       : (data.supportMethod === 'companion' ? 'コンパニオンアプリ' : 'ゲーム内'),
@@ -1297,7 +1178,7 @@ function upsertReservation_(sheet, existing, data) {
     ? existing.row
     : Math.max(sheet.getLastRow() + 1, CONFIG.RES_FIRST_DATA_ROW);
 
-  sheet.getRange(targetRow, 1, 1, 8).setValues(rowValues);
+  sheet.getRange(targetRow, 1, 1, CONFIG.RES_COL_UPDATED_AT).setValues(rowValues);
   sheet
     .getRange(targetRow, CONFIG.RES_COL_MODE)
     .setValue(data.mode === 'flexible' ? '随時受付' : '通常予約');
@@ -1452,17 +1333,7 @@ function validateBooking_(input) {
     throw new Error('ゲーム内対応では、集合希望DCを選択してください。');
   }
 
-  const needsWorld =
-    needsDc &&
-    input.date === '2026-10-12' &&
-    input.time <= '18:30';
-
-  if (needsWorld && !String(input.world || '').trim()) {
-    throw new Error('ゲーム内対応では、集合希望ワールドを選択してください。');
-  }
-
   if (!needsDc) input.dc = '';
-  if (!needsWorld) input.world = '';
 
   input.contact = '';
 }

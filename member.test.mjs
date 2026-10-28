@@ -16,9 +16,9 @@ test('version API identifies this fix and matches the frontend expected version'
   vm.runInContext(source, c);
   const result = JSON.parse(c.doGet({parameter: {action: 'version'}}));
   assert.equal(result.ok, true);
-  assert.equal(result.version, '2026.10.28.3');
+  assert.equal(result.version, '2026.10.28.4');
   assert.equal(result.version, expected);
-  assert.notEqual(result.version, '2026.10.28.2');
+  assert.notEqual(result.version, '2026.10.28.3');
 });
 
 function fixture(data = [], joinDate = '') {

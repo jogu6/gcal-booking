@@ -15,20 +15,23 @@ function boardDeliverySheet_() {
   return sheet;
 }
 
-function boardReservationText_(title, reservation, before) {
-  const lines = [title];
-  if (before) lines.push('変更前の予約日時：' + (before.date || '') + ' ' + (before.time || ''));
-  reservationFields_(reservation).forEach(field => lines.push(field.name + '：' + field.value));
-  lines.push('予約時間：' + (reservation.oneHourBooking ? '60分' : '30分'));
-  if (reservation.mode === 'flexible') lines.push('受付方式：特別受付');
-  // Keep literal text, including user punctuation, when the receiver removes Markdown.
-  return lines.join('\n').replace(/([\\`*_{}\[\]()<>#+.!|~\-])/g, '\\$1');
+function boardReservationText_(title, reservation, before, extraFields) {
+  // Escape values separately so authored Markdown remains active and member text stays literal.
+  const escape = value => String(value).replace(/([\\`*_{}\[\]()<>#+.!|~\-])/g, '\\$1');
+  const lines = ['## ' + escape(title), ''];
+  reservationFields_(reservation, before).concat(extraFields || []).forEach(field => {
+    const values = String(field.value).split('\n');
+    lines.push('- **' + escape(field.name) + '：** ' + escape(values[0]));
+    values.slice(1).forEach(value => lines.push('  - ' + escape(value)));
+  });
+  // Keep the authored heading, bold labels and list formatting for the Markdown-capable receiver.
+  return lines.join('\n');
 }
 
-function queueBoardReservation_(title, reservation, before) {
+function queueBoardReservation_(title, reservation, before, extraFields) {
   if (!PropertiesService.getScriptProperties().getProperty('GCAL_BOARD_WEBHOOK_URL')) return;
   try {
-    boardDeliverySheet_().appendRow([Utilities.getUuid(), new Date(), boardReservationText_(title, reservation, before), '待機', 0, new Date(), '', '']);
+    boardDeliverySheet_().appendRow([Utilities.getUuid(), new Date(), boardReservationText_(title, reservation, before, extraFields), '待機', 0, new Date(), '', '']);
   } catch (error) {
     // A notification failure must never undo a successful reservation.
     console.error('掲示板通知を保存できませんでした。予約管理シートから内容を確認してください。');
