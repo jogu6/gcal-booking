@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.28.2',
+  APP_VERSION: '2026.10.28.3',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -25,8 +25,9 @@ const CONFIG = {
   MEMBER_FIRST_DATA_ROW: 3,
   MEMBER_COL_NAME: 2,
   MEMBER_COL_HOME: 3,
-  MEMBER_COL_STATUS: 4,
-  MEMBER_COL_ONE_HOUR: 5,
+  MEMBER_COL_JOIN_DATE: 4,
+  MEMBER_COL_STATUS: 5,
+  MEMBER_COL_ONE_HOUR: 6,
 
   // 予約管理: A=キャラクター名 B=予約日 C=予約時刻 D=集合DC E=集合ワールド
   // F=対応方法 G=連絡先 H=更新日時 I=対応状況 J=対象者に連絡 K=受付方式 L=備考
@@ -65,15 +66,16 @@ function doGet(e) {
 
       const window = getBookingWindow_(privateSs);
       const holidays = getHolidayDates_(window.start, window.end);
+      const dailyHours = getDailyBookingHours_(privateSs, window.start, window.end, holidays);
 
       result = {
         ok: true,
-        booked: getBookedSlotsFromReservations_(reservations, window, specialReception),
-        flexibleCounts: getFlexibleSlotCounts_(reservations, window, specialReception),
+        booked: getBookedSlotsFromReservations_(reservations, window, specialReception, dailyHours),
+        flexibleCounts: getFlexibleSlotCounts_(reservations, window, specialReception, dailyHours),
         maintenance: maintenance.map(publicMaintenance_),
         specialReception: specialReception.map(publicSpecialReception_),
         holidays: holidays,
-        dailyHours: getDailyBookingHours_(privateSs, window.start, window.end, holidays),
+        dailyHours: dailyHours,
         windowStart: window.start,
         windowEnd: window.end,
         version: CONFIG.APP_VERSION
@@ -126,6 +128,7 @@ function member_(name) {
 
   const reservation = findReservationInRows_(readReservations_(getReservationSheet_()), normalized);
   const hasBooking = !!reservation && !!reservation.date && !!reservation.time;
+  const joinEligibility = getJoinEligibility_(member);
 
   return {
     ok: true,
@@ -136,7 +139,10 @@ function member_(name) {
       ? reservation.meetingDc
       : '',
     meetingWorld: hasBooking ? reservation.meetingWorld || '' : '',
-    eligible: member.status === 'ご予約待ち/ご予約中',
+    eligible: member.status === 'ご予約待ち/ご予約中' && joinEligibility.allowed,
+    code: joinEligibility.code || '',
+    message: joinEligibility.message || '',
+    bookingFrom: joinEligibility.bookingFrom || '',
     sourceStatus: member.status,
     oneHourBooking: !!member.oneHourBooking,
     canCancel: hasBooking,
@@ -167,6 +173,10 @@ function book_(input) {
       };
     }
 
+    const joinEligibility = getJoinEligibility_(member);
+    if (!joinEligibility.allowed) {
+      return {ok: false, code: joinEligibility.code, message: joinEligibility.message, bookingFrom: joinEligibility.bookingFrom || ''};
+    }
     const status = member.status;
 
     if (status === '登録完了') {
@@ -250,7 +260,7 @@ function book_(input) {
         return {
           ok: false,
           code: 'ONE_HOUR_OUTSIDE_HOURS',
-          message: '1時間予約がその日の受付終了時刻までに収まる開始時刻を選択してください。'
+          message: '1時間予約が1つの受付時間帯に収まる開始時刻を選択してください。'
         };
       }
 
@@ -313,23 +323,13 @@ function book_(input) {
         ? 'normal'
         : (isFlexibleSlot ? 'flexible' : 'normal');
 
-    const requestedKeys = [requestedKey];
-    if (oneHourBooking) {
-      requestedKeys.push(input.date + ' ' + secondTime);
-    }
-
     let collisionKey = '';
     const collision = reservations.some(reservation => {
       if (current && reservation.row === current.row) return false;
-
-      if (requestedMode === 'flexible' && reservation.mode === 'flexible') {
-        return false;
-      }
-
-      const occupied = reservationOccupiedKeys_(reservation);
-      const hit = requestedKeys.find(key => occupied.includes(key));
-      if (hit) collisionKey = hit;
-      return !!hit;
+      if (requestedMode === 'flexible' && reservation.mode === 'flexible') return false;
+      const overlaps = reservationOverlaps_(reservation, input.date, input.time, oneHourBooking ? 60 : 30);
+      if (overlaps) collisionKey = reservation.date + ' ' + reservation.time;
+      return overlaps;
     });
 
     if (collision) {
@@ -512,54 +512,40 @@ function reservationOccupiedKeys_(reservation) {
   return keys;
 }
 
-function getBookedSlotsFromReservations_(reservations, window, specialReception) {
+function getBookedSlotsFromReservations_(reservations, window, specialReception, dailyHours) {
   const set = new Set();
   const activeWindow = window || getBookingWindow_();
   const special = specialReception || [];
-
-  reservations.forEach(reservation => {
-    if (!reservation.date || !reservation.time) return;
-    if (reservation.date < activeWindow.start || reservation.date > activeWindow.end) return;
-
-    const state = getSpecialReceptionStateForSlot_(
-      reservation.date,
-      reservation.time,
-      special
-    );
-
-    if (state && state.state === 'flexible' && reservation.mode === 'flexible') {
-      return;
-    }
-
-    reservationOccupiedKeys_(reservation).forEach(key => set.add(key));
+  const hours = dailyHours || getDailyBookingHours_(getReservationSpreadsheet_(), activeWindow.start, activeWindow.end);
+  Object.keys(hours).forEach(date => {
+    candidateBookingTimes_(hours[date]).forEach(time => {
+      if (reservations.some(reservation => {
+        if (!reservationOverlaps_(reservation, date, time, 30)) return false;
+        const state = getSpecialReceptionStateForSlot_(date, time, special);
+        return !(state && state.state === 'flexible' && reservation.mode === 'flexible');
+      })) set.add(date + ' ' + time);
+    });
   });
-
   return Array.from(set).sort();
 }
 
-function getFlexibleSlotCounts_(reservations, window, specialReception) {
+function getFlexibleSlotCounts_(reservations, window, specialReception, dailyHours) {
   const counts = {};
   const activeWindow = window || getBookingWindow_();
   const special = specialReception || [];
-
-  reservations.forEach(reservation => {
-    if (!reservation.date || !reservation.time) return;
-    if (reservation.date < activeWindow.start || reservation.date > activeWindow.end) return;
-    if (reservation.mode !== 'flexible') return;
-
-    const state = getSpecialReceptionStateForSlot_(
-      reservation.date,
-      reservation.time,
-      special
-    );
-
-    if (!state || state.state !== 'flexible') return;
-
-    reservationOccupiedKeys_(reservation).forEach(key => {
-      counts[key] = (counts[key] || 0) + 1;
+  const hours = dailyHours || getDailyBookingHours_(getReservationSpreadsheet_(), activeWindow.start, activeWindow.end);
+  Object.keys(hours).forEach(date => {
+    candidateBookingTimes_(hours[date]).forEach(time => {
+      const candidateState = getSpecialReceptionStateForSlot_(date, time, special);
+      if (!candidateState || candidateState.state !== 'flexible') return;
+      const count = reservations.filter(reservation => {
+        if (reservation.mode !== 'flexible' || !reservationOverlaps_(reservation, date, time, 30)) return false;
+        const state = getSpecialReceptionStateForSlot_(reservation.date, reservation.time, special);
+        return state && state.state === 'flexible';
+      }).length;
+      if (count) counts[date + ' ' + time] = count;
     });
   });
-
   return counts;
 }
 
@@ -589,7 +575,7 @@ function getBookingEndDateOverride_(reservationSs) {
 }
 
 function bookingTimeMinute_(value, allowEndOfDay) {
-  const match = String(value || '').trim().match(/^(\d{1,2}):(00|30)$/);
+  const match = String(value || '').trim().match(/^(\d{1,2}):([0-5]\d)$/);
   if (!match) return NaN;
   const minute = Number(match[1]) * 60 + Number(match[2]);
   return minute >= 0 && (minute < 1440 || (allowEndOfDay && minute === 1440))
@@ -601,26 +587,34 @@ function getWeeklyBookingHours_(ss) {
   const schedule = {};
   const sheet = ss.getSheetByName(CONFIG.BOOKING_HOURS_SHEET_NAME);
   if (!sheet) {
-    keys.forEach(key => { schedule[key] = {startMinute: CONFIG.START_MINUTE, endMinute: CONFIG.END_MINUTE}; });
+    keys.forEach(key => { schedule[key] = {intervals: [{startMinute: CONFIG.START_MINUTE, endMinute: CONFIG.END_MINUTE}], stepMinutes: 30}; });
     return schedule;
   }
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) throw new Error('「受付時間」に曜日・祝日の設定がありません。');
-  sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues().forEach(row => {
+  sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getMaxColumns(), 8)).getDisplayValues().forEach(row => {
     const key = String(row[0] || '').trim();
-    if (!key && !String(row[1] || '').trim() && !String(row[2] || '').trim()) return;
+    if (row.every(value => !String(value || '').trim())) return;
     if (!keys.includes(key) || schedule[key]) throw new Error('「受付時間」の区分が不正または重複しています：' + key);
-    const start = String(row[1] || '').trim(), end = String(row[2] || '').trim();
-    if (!start && !end) {
-      schedule[key] = {startMinute: 0, endMinute: 0};
-      return;
+    const intervals = [];
+    for (let index = 0; index < 3; index++) {
+      const start = String(row[1 + index * 2] || '').trim();
+      const end = String(row[2 + index * 2] || '').trim();
+      if (!start && !end) continue;
+      const startMinute = bookingTimeMinute_(start, false);
+      const endMinute = bookingTimeMinute_(end, true);
+      if (!Number.isFinite(startMinute) || !Number.isFinite(endMinute) || startMinute >= endMinute) {
+        throw new Error('「受付時間」の' + key + '・時間帯' + (index + 1) + 'は、開始より後の終了時刻を指定してください。日をまたぐ設定はできません。');
+      }
+      intervals.push({startMinute: startMinute, endMinute: endMinute});
     }
-    const startMinute = bookingTimeMinute_(start, false);
-    const endMinute = bookingTimeMinute_(end, true);
-    if (!Number.isFinite(startMinute) || !Number.isFinite(endMinute) || startMinute >= endMinute) {
-      throw new Error('「受付時間」の' + key + 'は、開始より後の終了時刻を30分単位で指定してください。日をまたぐ設定はできません。');
+    intervals.sort((left, right) => left.startMinute - right.startMinute);
+    if (intervals.some((value, index) => index > 0 && value.startMinute < intervals[index - 1].endMinute)) {
+      throw new Error('「受付時間」の' + key + 'の時間帯が重複しています。');
     }
-    schedule[key] = {startMinute: startMinute, endMinute: endMinute};
+    const stepMinutes = String(row[7] || '').trim() === '' ? 30 : Number(row[7]);
+    if (![15, 30, 60].includes(stepMinutes)) throw new Error('「受付時間」の開始間隔は15・30・60分から指定してください：' + key);
+    schedule[key] = {intervals: intervals, stepMinutes: stepMinutes};
   });
   keys.forEach(key => { if (!schedule[key]) throw new Error('「受付時間」に' + key + 'の行がありません。'); });
   return schedule;
@@ -634,15 +628,34 @@ function getDailyBookingHours_(ss, start, end, holidayDates) {
     const parts = date.split('-').map(Number);
     const weekday = ['日', '月', '火', '水', '木', '金', '土'][new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay()];
     const key = holidays.has(date) ? '祝日' : weekday;
-    hours[date] = {startMinute: schedule[key].startMinute, endMinute: schedule[key].endMinute, category: key};
+    hours[date] = {intervals: schedule[key].intervals, stepMinutes: schedule[key].stepMinutes, category: key};
   }
   return hours;
 }
 
 function isWithinBookingHours_(hours, time, duration) {
   const minute = bookingTimeMinute_(time, false);
-  return !!hours && Number.isFinite(minute) && minute >= hours.startMinute &&
-    minute + duration <= hours.endMinute;
+  return !!hours && Number.isFinite(minute) && hours.intervals.some(interval =>
+    minute >= interval.startMinute && minute + duration <= interval.endMinute &&
+    (minute - interval.startMinute) % hours.stepMinutes === 0);
+}
+
+function candidateBookingTimes_(hours) {
+  const times = [];
+  hours.intervals.forEach(interval => {
+    for (let minute = interval.startMinute; minute + 30 <= interval.endMinute; minute += hours.stepMinutes) {
+      times.push(String(Math.floor(minute / 60)).padStart(2, '0') + ':' + String(minute % 60).padStart(2, '0'));
+    }
+  });
+  return times;
+}
+
+function reservationOverlaps_(reservation, date, time, duration) {
+  if (reservation.date !== date) return false;
+  const start = bookingTimeMinute_(time, false);
+  const existing = bookingTimeMinute_(reservation.time, false);
+  return Number.isFinite(start) && Number.isFinite(existing) &&
+    start < existing + (reservation.oneHourBooking ? 60 : 30) && start + duration > existing;
 }
 
 function getBookingWindow_(reservationSs) {
@@ -677,6 +690,34 @@ function shouldNotifyAllReservationEvents_() {
   return true;
 }
 
+function getJoinEligibility_(member, today) {
+  const raw = member.joinDate;
+  // Empty cells explicitly mean that at least 30 days have already elapsed.
+  if (raw === undefined || raw === null || String(raw).trim() === '') return {allowed: true};
+  let date = '';
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    date = Utilities.formatDate(raw, CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+  } else {
+    const match = String(raw).trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    if (match) {
+      const candidate = match[1] + '-' + match[2].padStart(2, '0') + '-' + match[3].padStart(2, '0');
+      const parsed = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+      if (Utilities.formatDate(parsed, 'UTC', 'yyyy-MM-dd') === candidate) date = candidate;
+    }
+  }
+  if (!date) return {allowed: false, code: 'MEMBER_JOIN_DATE_INVALID', message: '加入日の記録を確認できません。管理者へご連絡ください。'};
+  const bookingFrom = addDaysToDateKey_(date, 30);
+  const currentDate = today || Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, 'yyyy-MM-dd');
+  if (currentDate >= bookingFrom) return {allowed: true, bookingFrom: bookingFrom};
+  const parts = bookingFrom.split('-').map(Number);
+  return {
+    allowed: false,
+    code: 'MEMBER_TOO_NEW',
+    bookingFrom: bookingFrom,
+    message: '加入から30日が経過していないため、まだ予約できません。' + parts[0] + '年' + parts[1] + '月' + parts[2] + '日から予約できます。'
+  };
+}
+
 function findMember_(sheet, normalizedName) {
   const lastRow = sheet.getLastRow();
   if (lastRow < CONFIG.MEMBER_FIRST_DATA_ROW) return null;
@@ -687,7 +728,7 @@ function findMember_(sheet, normalizedName) {
       CONFIG.MEMBER_FIRST_DATA_ROW,
       CONFIG.MEMBER_COL_NAME,
       rowCount,
-      4
+      CONFIG.MEMBER_COL_ONE_HOUR - CONFIG.MEMBER_COL_NAME + 1
     )
     .getValues();
 
@@ -700,8 +741,9 @@ function findMember_(sheet, normalizedName) {
       row: CONFIG.MEMBER_FIRST_DATA_ROW + i,
       name: name,
       home: String(values[i][1] || '').trim(),
-      status: String(values[i][2] || '').trim(),
-      oneHourBooking: values[i][3] === true
+      joinDate: values[i][CONFIG.MEMBER_COL_JOIN_DATE - CONFIG.MEMBER_COL_NAME],
+      status: String(values[i][CONFIG.MEMBER_COL_STATUS - CONFIG.MEMBER_COL_NAME] || '').trim(),
+      oneHourBooking: values[i][CONFIG.MEMBER_COL_ONE_HOUR - CONFIG.MEMBER_COL_NAME] === true
     };
   }
   return null;

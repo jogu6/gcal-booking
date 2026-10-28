@@ -201,6 +201,7 @@ p,li{line-height:1.8}
   text-align:center;
   letter-spacing:.02em;
 }
+.day-hours{display:block;font-size:14px;font-weight:400;margin-top:4px;line-height:1.6}
 .day-title.saturday{color:#86bfff}
 .day-title.sunday,.day-title.holiday{color:#ff9d9d}
 .slots{
@@ -1088,7 +1089,7 @@ button.slot .support-icon{
     <div class="notice">
       <strong>予約受付期間：</strong><span id="bookingPeriodText">計算中…</span><br>
       <span class="small">期間外をご希望の方は、リーダーもしくは私 Og Og までご連絡ください。</span><br>
-      <strong>対応時間：</strong>曜日・祝日ごとの受付時間は、下のカレンダーでご確認ください（開始は30分単位）。
+      <strong>対応時間：</strong>曜日・祝日ごとの受付時間は、下のカレンダーでご確認ください（開始間隔は曜日・祝日ごとに異なります）。
     </div>
 
     <div class="maintenance-policy-note">
@@ -1278,7 +1279,7 @@ button.slot .support-icon{
 <script>
   // Apps Scriptをウェブアプリとして公開した後、その /exec URL に差し替えます。
   const API_URL = "https://script.google.com/macros/s/AKfycbwOYbRPlEyE6EGLN-lXyCbtsBE9pVPt9sDC1x1r99X2L-oGTB8i282SOKRRyMFJT3Hjcw/exec";
-  const EXPECTED_API_VERSION = "2026.10.28.2";
+  const EXPECTED_API_VERSION = "2026.10.28.3";
 
   let START_DATE = "2026-10-11";
 
@@ -1400,9 +1401,11 @@ button.slot .support-icon{
     const hours=dailyHours[date];
     if(!hours) return [];
     const times=[];
-    for(let minute=hours.startMinute; minute+30<=hours.endMinute; minute+=30){
-      times.push(minuteTime(minute));
-    }
+    hours.intervals.forEach(interval=>{
+      for(let minute=interval.startMinute; minute+30<=interval.endMinute; minute+=hours.stepMinutes){
+        times.push(minuteTime(minute));
+      }
+    });
     return times;
   }
 
@@ -1707,12 +1710,12 @@ button.slot .support-icon{
       }
 
       if(result.eligible === false){
-        let msg="このキャラクターは現在予約できません。";
-        if(result.sourceStatus === "登録完了"){
+        let msg=result.message || "このキャラクターは現在予約できません。";
+        if(!result.message && result.sourceStatus === "登録完了"){
           msg="このキャラクターはすでに登録完了しています。";
-        }else if(result.sourceStatus === "招待不要"){
+        }else if(!result.message && result.sourceStatus === "招待不要"){
           msg="このキャラクターは今回の予約対象ではありません。サブキャラの場合は、メインキャラでご予約ください。";
-        }else if(result.sourceStatus === "招待済み"){
+        }else if(!result.message && result.sourceStatus === "招待済み"){
           msg="このキャラクターはすでに招待済みです。";
         }
         showMessage(msg,"error");
@@ -1724,8 +1727,8 @@ button.slot .support-icon{
 
       const hours=dailyHours[selected.date];
       const [hour,minute]=selected.time.split(":").map(Number);
-      if(verifiedOneHour && (!hours || hour*60+minute+60>hours.endMinute)){
-        showMessage("1時間予約がその日の受付終了時刻までに収まる開始時刻を選択してください。","error");
+      if(verifiedOneHour && (!hours || !hours.intervals.some(interval=>hour*60+minute>=interval.startMinute && hour*60+minute+60<=interval.endMinute))){
+        showMessage("1時間予約が1つの受付時間帯に収まる開始時刻を選択してください。","error");
         return false;
       }
 
@@ -1881,9 +1884,14 @@ button.slot .support-icon{
       const nextHours={};
       for(let date=START_DATE;date<=END_DATE;){
         const hours=result.dailyHours[date];
-        if(!hours || !Number.isInteger(hours.startMinute) || !Number.isInteger(hours.endMinute) ||
-          hours.startMinute<0 || hours.endMinute>1440 || hours.startMinute>hours.endMinute ||
-          hours.startMinute%30 || hours.endMinute%30) throw new Error("受付時間の設定が不正です。");
+        if(!hours || !Array.isArray(hours.intervals) || hours.intervals.length>3 || ![15,30,60].includes(hours.stepMinutes)) throw new Error("受付時間の設定が不正です。");
+        let previousEnd=-1;
+        for(const interval of hours.intervals){
+          if(!Number.isInteger(interval.startMinute) || !Number.isInteger(interval.endMinute) ||
+            interval.startMinute<0 || interval.endMinute>1440 || interval.startMinute>=interval.endMinute ||
+            interval.startMinute<previousEnd) throw new Error("受付時間の設定が不正です。");
+          previousEnd=interval.endMinute;
+        }
         nextHours[date]=hours;
         const next=parseDate(date);next.setDate(next.getDate()+1);date=dateKey(next);
       }
@@ -1979,8 +1987,12 @@ button.slot .support-icon{
       if(current.getDay()===0) title.classList.add("sunday");
       if(HOLIDAYS.has(d)) title.classList.add("holiday");
       const hours=dailyHours[d];
-      title.textContent=displayDate(d)+(hours && hours.startMinute<hours.endMinute
-        ? "　"+minuteTime(hours.startMinute)+"～"+minuteTime(hours.endMinute) : "　受付休止");
+      title.textContent=displayDate(d);
+      const hoursLabel=document.createElement("span");hoursLabel.className="day-hours";
+      hoursLabel.textContent=hours && hours.intervals.length
+        ? hours.intervals.map(interval=>minuteTime(interval.startMinute)+"～"+minuteTime(interval.endMinute)).join(" / ")+"（"+hours.stepMinutes+"分刻み）"
+        : "受付休止";
+      title.appendChild(hoursLabel);
 
       const slots=document.createElement("div");
       slots.className="slots";
@@ -2434,8 +2446,7 @@ button.slot .support-icon{
 
       if(!result.ok) throw new Error(result.message || "予約を取り消せませんでした。");
 
-      if(result.oldKey) bookedSlots.delete(result.oldKey);
-      renderCalendar();
+      await loadSlots(0,true);
       cancelNameInput.value="";
       clearCancelLookup();
 
@@ -2532,17 +2543,6 @@ button.slot .support-icon{
 
       const bookedSupportMethod=request.supportMethod;
       const bookedKey=result.bookedKey || `${request.date} ${request.time}`;
-      if(result.oldKey && result.oldKey !== bookedKey) bookedSlots.delete(result.oldKey);
-
-      if(result.mode==="normal"){
-        bookedSlots.add(bookedKey);
-        renderCalendar();
-      }else{
-        const currentCount=Number(flexibleSlotCounts[bookedKey] || 0);
-        flexibleSlotCounts[bookedKey]=currentCount+1;
-        renderCalendar();
-      }
-
       selected=null;
       selectedFlexible=false;
       document.getElementById("flexibleSelectedNotice").classList.add("hidden");
@@ -2556,12 +2556,10 @@ button.slot .support-icon{
       supportMethodPanel.classList.add("hidden");
       document.getElementById("formCard").classList.add("hidden");
 
+      await loadSlots(0,true);
       openBookingSuccess(bookedSupportMethod,result.durationMinutes===60);
       scrollToSlot(bookedKey);
 
-      if(result.mode!=="normal"){
-        setTimeout(()=>loadSlots(0,true),400);
-      }
     }catch(err){
       const message=err.message || "予約できませんでした。";
 
