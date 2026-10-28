@@ -1073,9 +1073,9 @@ function hasReservationChanged_(before, after) {
 }
 
 function notifyDiscordReservationCreated_(reservation) {
-  queueBoardReservation_('🆕 新規予約', reservation);
+  queueBoardReservation_('🟢 新規予約', reservation);
   sendDiscordReservationEmbed_({
-    title: '🆕 新規予約',
+    title: '🟢 新規予約',
     fields: reservationFields_(reservation)
   });
 }
