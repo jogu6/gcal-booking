@@ -1804,6 +1804,9 @@ button.slot .support-icon{
   async function loadSlots(retryCount=0, silent=true){
     const loading=document.getElementById("loading");
     try{
+      // Check the deployment before slots, which can automatically cancel reservations.
+      const version=await jsonp({action:"version"},"予約サーバーを確認しています…",!silent);
+      if(!version.ok) throw new Error(version.message || "予約サーバーを確認できませんでした");
       const result=await jsonp(
         {action:"slots"},
         "予約状況を読み込んでいます…",
