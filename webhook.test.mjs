@@ -49,6 +49,9 @@ test('Discord and board share concise fields, time ranges and changes without wo
  c.notifyDiscordReservationCreated_(after);c.notifyDiscordReservationChanged_(before,after);c.notifyDiscordReservationCancelled_(after);
  const embeds=f.sent.map(item=>JSON.parse(item.options.payload).embeds[0]);
  assert.equal(embeds.length,3);
+ const titles=['🆕 新規予約','🔄 予約変更','❌ 予約取り消し'];
+ assert.deepEqual(embeds.map(embed=>embed.title),titles);
+ titles.forEach((title,index)=>assert.ok(f.rows[index+1][2].startsWith('## '+title+'\n\n')));
  for(const embed of embeds){
   const names=embed.fields.map(field=>field.name);assert.equal(names.includes('集合ワールド'),false);assert.equal(names.includes('集合DC'),false);assert.equal(names.includes('連絡先'),false);
   assert.equal(embed.fields.find(field=>field.name==='予約日時').value,'2026-11-01 15:00～16:00');

@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.28.4',
+  APP_VERSION: '2026.10.28.5',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -1073,22 +1073,22 @@ function hasReservationChanged_(before, after) {
 }
 
 function notifyDiscordReservationCreated_(reservation) {
-  queueBoardReservation_('新規予約', reservation);
+  queueBoardReservation_('🆕 新規予約', reservation);
   sendDiscordReservationEmbed_({
-    title: '新規予約',
+    title: '🆕 新規予約',
     fields: reservationFields_(reservation)
   });
 }
 
 function notifyDiscordReservationChanged_(before, after) {
-  queueBoardReservation_('予約変更', after, before);
-  sendDiscordReservationEmbed_({title: '予約変更', fields: reservationFields_(after, before)});
+  queueBoardReservation_('🔄 予約変更', after, before);
+  sendDiscordReservationEmbed_({title: '🔄 予約変更', fields: reservationFields_(after, before)});
 }
 
 function notifyDiscordReservationCancelled_(reservation) {
-  queueBoardReservation_('予約取り消し', reservation);
+  queueBoardReservation_('❌ 予約取り消し', reservation);
   sendDiscordReservationEmbed_({
-    title: '予約取り消し',
+    title: '❌ 予約取り消し',
     fields: reservationFields_(reservation)
   });
 }
