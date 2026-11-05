@@ -62,7 +62,7 @@ test('actual booking path accepts the last valid slots and rejects out-of-hours 
  f=bookingFixture(true);assert.equal(f.c.book_(f.input('21:00')).durationMinutes,60);
  f=bookingFixture(true);assert.equal(f.c.book_(f.input('21:30')).code,'ONE_HOUR_OUTSIDE_HOURS');assert.equal(f.saved(),null);
  f=bookingFixture(false);assert.throws(()=>f.c.book_(f.input('17:30')),/予約可能時間外/);assert.equal(f.saved(),null);
- f=bookingFixture(false);assert.throws(()=>f.c.book_({...f.input('20:00'),supportMethod:'x'}),/受付は終了/);assert.equal(f.saved(),null);
+ for(const method of ['x','companion']){f=bookingFixture(false);assert.throws(()=>f.c.book_({...f.input('20:00'),supportMethod:method}),/受付は終了/);assert.equal(f.saved(),null);}
 });
 
 test('holiday master returns ISO text and Date cells with inclusive boundaries',()=>{
@@ -145,4 +145,13 @@ test('flexible reservations cannot appear free across a transition to normal boo
  assert.equal(blocked.join(','),'2099-01-01 10:00');
  const counts=c.getFlexibleSlotCounts_([r],window,[],hours);
  assert.equal(counts['2099-01-01 09:45'],1);assert.equal(counts['2099-01-01 10:00'],undefined);
+});
+
+test('historical companion reservations remain readable and cancelable after reception ends',()=>{
+ const c=context(),rows=[['Test Member','2099/1/1','20:00','','コンパニオンアプリ','','','','','通常予約','1時間予約']];
+ const sheet={getLastRow:()=>2,getRange:()=>({getDisplayValues:()=>rows}),deleteRow:row=>{assert.equal(row,2);rows.length=0;}};
+ const reservation=c.readReservations_(sheet)[0];assert.equal(reservation.supportMethod,'companion');assert.equal(reservation.oneHourBooking,true);
+ assert.equal(c.reconcileReservationsForMaintenance_(sheet,[reservation],[]).length,1);
+ c.getReservationSheet_=()=>sheet;c.shouldNotifyAllReservationEvents_=()=>false;c.LockService={getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{}})};
+ assert.equal(c.cancel_('Test Member').ok,true);assert.equal(rows.length,0);
 });

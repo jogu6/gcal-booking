@@ -1,5 +1,5 @@
 const CONFIG = {
-  APP_VERSION: '2026.10.28.5',
+  APP_VERSION: '2026.11.05.1',
   MEMBER_SPREADSHEET_ID: '1lF_hqTu9Oe2VbH7-CEyKg14942SWgGKpwJ5Z-cGCz04',
   MEMBER_SHEET_NAME: '招待状況',
 
@@ -164,7 +164,7 @@ function book_(input) {
     if (!member) {
       return {
         ok: false,
-        message: '名前が間違っています。メンバーリストに登録されているキャラクターフルネームを確認してください。'
+        message: 'メンバー表で名前を確認できませんでした。綴りと姓・名の間のスペースをご確認ください。'
       };
     }
 
@@ -175,7 +175,7 @@ function book_(input) {
     const status = member.status;
 
     if (status === '登録完了') {
-      return { ok: false, message: 'このキャラクターはすでに登録完了しています。' };
+      return { ok: false, message: 'このキャラクターは登録済みのため、新しい予約はできません。' };
     }
     if (status === '招待不要') {
       return {
@@ -184,10 +184,10 @@ function book_(input) {
       };
     }
     if (status === '招待済み') {
-      return { ok: false, message: 'このキャラクターはすでに招待済みです。' };
+      return { ok: false, message: 'このキャラクターは招待済みです。案内済みのURLをご確認ください。' };
     }
     if (status !== 'ご予約待ち/ご予約中') {
-      return { ok: false, message: 'このキャラクターは現在予約できません。' };
+      return { ok: false, message: 'このキャラクターは現在、予約の対象外です。' };
     }
 
     const privateSs = getReservationSpreadsheet_();
@@ -241,7 +241,7 @@ function book_(input) {
       return {
         ok: false,
         code: 'SPECIAL_BUFFER',
-        message: 'この時間帯は随時受付から通常予約へ切り替えるためのアディショナルタイムです。'
+        message: 'この時間帯は受付の切り替え中です。別の時刻を選んでください。'
       };
     }
 
@@ -287,7 +287,7 @@ function book_(input) {
         return {
           ok: false,
           code: 'ONE_HOUR_SECOND_BUFFER',
-          message: '1時間予約の後半30分がアディショナルタイムのため、この時刻は予約できません。'
+          message: '60分の予約が受付の切り替え時間に重なるため、この時刻は予約できません。'
         };
       }
 
@@ -384,7 +384,7 @@ function book_(input) {
 function cancel_(name) {
   const normalized = normalizeName_(name);
   if (!normalized) {
-    return { ok: false, message: 'キャラクターフルネームを入力してください。' };
+    return { ok: false, message: '予約したキャラクター名を、姓・名の両方入力してください。' };
   }
 
   const lock = LockService.getScriptLock();
@@ -395,7 +395,7 @@ function cancel_(name) {
     const reservation = findReservationInRows_(readReservations_(reservationSheet), normalized);
 
     if (!reservation || !reservation.date || !reservation.time) {
-      return { ok: false, message: '取り消せる予約がありません。' };
+      return { ok: false, message: 'このキャラクターの予約は見つかりませんでした。' };
     }
 
     const oldKey = reservation.date + ' ' + reservation.time;
@@ -1256,17 +1256,20 @@ function normalizeSheetDate_(value) {
 
 function validateBooking_(input) {
   if (input.supportMethod === 'x') {
-    throw new Error('Xによるサポートの受付は終了しました。ゲーム内またはコンパニオンアプリを選択してください。');
+    throw new Error('Xによるサポートの受付は終了しました。ゲーム内での対応をご利用ください。');
+  }
+  if (input.supportMethod === 'companion') {
+    throw new Error('コンパニオンアプリによるサポートの受付は終了しました。ゲーム内での対応をご利用ください。');
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date || '')) {
-    throw new Error('日付が不正です。');
+    throw new Error('予約日を確認できませんでした。カレンダーから日時を選び直してください。');
   }
   if (!/^\d{2}:\d{2}$/.test(input.time || '')) {
-    throw new Error('時刻が不正です。');
+    throw new Error('予約時刻を確認できませんでした。カレンダーから日時を選び直してください。');
   }
   const bookingWindow = getBookingWindow_();
   if (input.date < bookingWindow.start || input.date > bookingWindow.end) {
-    throw new Error('予約期間外です。');
+    throw new Error('予約の受付期間外です。カレンダーから日時を選び直してください。');
   }
 
   const privateSs = getReservationSpreadsheet_();
@@ -1311,12 +1314,12 @@ function validateBooking_(input) {
 
   const normalized = normalizeName_(input.name);
   if (!/^[a-z][a-z'-]* [a-z][a-z'-]*$/i.test(normalized)) {
-    throw new Error('キャラクターフルネームを「Aaaa Bbbb」の形式で入力してください。');
+    throw new Error('キャラクター名は「Aaaa Bbbb」のように、姓と名を半角スペースで区切って入力してください。');
   }
 
-  const allowedMethods = ['game', 'companion'];
+  const allowedMethods = ['game'];
   if (!allowedMethods.includes(input.supportMethod)) {
-    throw new Error('招待・登録サポート方法を選択してください。');
+    throw new Error('対応方法はゲーム内のみです。');
   }
 
   const allowedDc = ['Elemental', 'Gaia', 'Mana', 'Meteor'];
